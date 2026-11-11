@@ -92,6 +92,7 @@ PYIMG ?= /c/Users/Antxiko/AppData/Local/Programs/Python/Python313/python.exe
 imagenes: $(ROM)
 	$(PYIMG) tools/pantallas.py docs/imagenes
 	$(PYIMG) tools/gifs.py docs/imagenes
+	$(PYIMG) tools/hojas.py docs/imagenes
 
 musica: $(ROM)
 	$(PYIMG) tools/musica.py todas docs/audio

@@ -90,6 +90,11 @@ PAGINAS = [
      ("THE-BETS.html", "LAS-APUESTAS.html", "The bets", "Las apuestas",
       "the odds, how to bet and how the winners are paid, in GIF",
       "las cuotas, c&oacute;mo se apuesta y c&oacute;mo se paga, en GIF"),
+     ("THE-SPRITES.html", "LOS-SPRITES.html", "The sprites", "Los sprites",
+      "the ten drawings of the horse in the four colours, its animations and the jockey, put together from the ROM "
+      "tables",
+      "los diez dibujos del caballo en los cuatro colores, sus animaciones y el jinete, montados desde las tablas de "
+      "la ROM"),
      ("THE-TEXTS.html", "LOS-TEXTOS.html", "The texts", "Los textos",
       "every text in the ROM, with its translation",
       "todos los textos de la ROM, con su traducci&oacute;n"),
