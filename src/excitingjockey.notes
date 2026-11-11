@@ -1,0 +1,2697 @@
+# EXCITING JOCKEY (Casio, 1984) - anotaciones
+#
+# LA ROM: 16 KB en la pagina 2 (0x8000-0xBFFF). La cabecera es "AB" e INIT
+# (0x8010); el resto de la cabecera, a cero.
+#
+# USA LA BIOS: DISSCR/ENASCR (0x0041/0x0044) para apagar y encender la pantalla,
+# WRTVDP (0x0047), FILVRM (0x0056), LDIRVM (0x005C), WRTVRM (0x004D), GTSTCK
+# (0x00D5), GTTRIG (0x00D8), SNSMAT (0x0141) y WRTPSG/RDPSG (0x0093/0x0096). No
+# usa INIGRP: pone SCREEN 2 a mano con los ocho registros de 0x8053.
+#
+# CASI TODO VA EN LA INTERRUPCION: el gancho H.TIMI (0xFD9F) salta a 0x805B, que
+# cada cuadro manda los sprites, mueve la maquina de estados (0x83E2), el sonido,
+# la carrera y los mandos. El bucle de INIT solo llama sin parar a 0xA2F5.
+#
+# EL JUEGO: carreras de obstaculos (大障害競馬, "el gran premio de obstaculos"):
+# cuatro caballos, nueve carreras de hierba o de tierra de 1200 a 3600 metros.
+# En el modo A el jugador lleva un caballo; en los modos B a E, de uno a cuatro
+# jugadores apuestan a las combinaciones de dos caballos (1-2, 1-3... 3-4) con
+# su cuota (ODDS) y el ordenador corre la carrera.
+#
+# LA RAM, lo que se lee en el listado:
+#   0xE000 la carrera (1-9)   0xE001 el modo: 0 el jinete, 1-4 cuantos apuestan, 0xFF la demostracion
+#   0xE002 el caballo del jugador (1-4)   0xE003-0xE005 la palanca y los dos botones (0xE006-0xE008 los del cuadro anterior)
+#   0xE009-0xE00B lo recien pulsado   0xE00C la palanca con repeticion   0xE05C una cuenta atras (16 bits)
+#   0xE05E / 0xE05F el estado del juego y su paso (0x83E2)   0xE063 la opcion elegida
+#   0xE06C la pista: 0 quieta, 1 empieza, 2 corre   0xE06D la velocidad de la pista   0xE071 lo que queda de carrera
+#   0xE07B un contador de cuadros   0xE07F, 0xE09F, 0xE0BF, 0xE0DF los cuatro caballos (32 bytes cada uno)
+#   0xE180 la tabla de sprites (26 sprites, va a 0x1B00)   0xE500 la pantalla de la seleccion (se monta al arrancar)
+#   0xE800 un sitio de paso para la VRAM   0xF000-0xF05F el motor de sonido   0xF300 la interrupcion: 0xFF corriendo
+# ======================================================================
+# EL ARRANQUE Y LA INTERRUPCION
+# ======================================================================
+D 0x8000 0x8010 cabecera  "AB", INIT (0x8010) y el resto de la cabecera a cero
+F 0x8000 2,w,12
+B 0x8010 INIT: la interrupcion en H.TIMI, SCREEN 2, el sonido callado y el bucle.
+L 0x8010 init                      El arranque
+C 0x8011 la pila, por debajo de la zona de trabajo de la BIOS
+C 0x8016 la interrupcion (0x805B)...
+C 0x8019 ...en H.TIMI...
+C 0x801C ...con su "jp"
+C 0x8021 la interrupcion aun no hace nada
+C 0x8027 SCREEN 2: los ocho registros del VDP
+C 0x802A el sonido callado
+C 0x802D el estado del juego: 1, paso 1 (cargar los dibujos)
+C 0x8031 la interrupcion ya trabaja...
+C 0x8036 ...y no esta ocupada
+L 0x803C bucle                     El bucle principal: solo 0xA2F5, todo lo demas va en la interrupcion
+L 0x8042 vdp_registros             Los ocho registros del VDP de 0x8053 (WRTVDP): SCREEN 2, sprites de 16 x 16
+C 0x8042 los valores...
+C 0x8045 ...ocho, desde el registro 0
+C 0x804A WRTVDP
+D 0x8053 0x805B registros_vdp  SCREEN 2 (0x02, 0xA2), nombres en 0x1800, colores en 0x2000, patrones en 0x0000, sprites en 0x1B00 y 0x3800, borde negro
+F 0x8053 8
+L 0x805B interrupcion              La interrupcion (H.TIMI): un cuadro del juego, si el anterior ha acabado
+C 0x805B ya trabaja?
+C 0x8060 ocupada con el cuadro anterior?
+C 0x8067 ocupada
+C 0x806C los sprites y la maquina de estados
+C 0x806F la carrera
+C 0x8072 el sonido
+C 0x8075 libre
+L 0x807B interrupcion_tarde        El cuadro anterior no ha acabado: solo cuenta
+C 0x807B los cuadros perdidos (0xF302)
+L 0x8083 salta_tabla               Salta por la tabla de palabras que va detras del "call": A = 1, 2...; con A = 0 vuelve de quien llama
+C 0x8083 HL = la tabla (la vuelta del "call")
+C 0x8086 la vuelta pasa a ser 0x8092
+C 0x808A C = A - 1
+C 0x808C A = 0?...
+C 0x808E ...vuelve de quien ha llamado
+L 0x8092 salta_tabla_va            La palabra C de la tabla y salta alli
+C 0x8094 C x 2
+C 0x8097 la direccion...
+C 0x809C ...en la pila: el "ret" salta
+L 0x809E llena                     Llena B bytes desde HL con A (B = 0: 256)
+L 0x80A3 suma_paso                 HL+1 += (HL) & 0x3F; devuelve en A el acarreo de los 6 bits (cuantas veces se pasa de 64)
+C 0x80A6 DE = HL + 1
+C 0x80A9 el paso...
+C 0x80AC ...mas los 6 bits bajos de la cuenta
+C 0x80B2 la cuenta nueva
+C 0x80B4 los bits que pasan de 64...
+C 0x80B6 ...en A
+L 0x80BB tabla_umbral              A contra los cuatro umbrales de HL: el byte HL+3+n del primero que A no alcanza
+C 0x80BD cuatro umbrales
+C 0x80BF el resultado empieza en +3
+C 0x80C1 menor que este?
+C 0x80C4 el siguiente
+L 0x80C8 tabla_umbral_lee          Lee el byte
+L 0x80D1 llena_filas               B grupos de 8 bytes desde HL con C (los colores de las casillas)
+L 0x80D3 llena_filas_uno           Un byte
+L 0x80DB pieza                     Pone la pieza DE en el canal B y la hace sonar
+C 0x80DE el principio de la pieza
+C 0x80E2 suena
+# ======================================================================
+# EL MOTOR DE SONIDO (el mismo de Ski Command y Exciting Baseball)
+# ======================================================================
+L 0x80E5 canal                     HL = el canal B (0xF002 + B x 0x20), y lo deja en su estado inicial (0x8320)
+C 0x80E7 los canales desde 0xF002...
+C 0x80EA ...de 32 en 32 bytes
+C 0x80ED B por 32
+C 0x80F2 HL, el canal...
+C 0x80F3 ...y desde +2...
+C 0x80F6 ...30 bytes de 0x8320
+C 0x80F9 30 bytes
+L 0x8102 sonido_calla              Calla el sonido: los tres canales a cero, el PSG sin ruido y los volumenes a 0
+C 0x8103 sin transporte
+C 0x8106 el canal 0...
+C 0x8112 el registro 7 del PSG (RDPSG)...
+C 0x8117 ...los dos bits de los puertos se quedan...
+C 0x8119 ...los tonos apagados (0x38)...
+C 0x811E ...WRTPSG
+C 0x8121 los tres canales, callados
+C 0x812B tres volumenes
+L 0x812D sonido_calla_vol          Un volumen a 0
+L 0x8132 canal_calla               El volumen del canal B a 0...
+L 0x8133 volumen                   ...y el volumen E en el registro 8 + B del PSG
+C 0x8134 el registro de volumen del canal
+L 0x813A sonido_cuadro             Un cuadro del motor: los tres canales, del 2 al 0
+C 0x813C empieza por el 2
+L 0x8140 sonido_cuadro_uno         Un canal
+C 0x8143 el canal siguiente
+C 0x8148 el numero de canal...
+C 0x814C ...uno menos
+L 0x814E canal_cuadro              Un cuadro de un canal: el tempo, la nota y la envolvente
+C 0x814F el canal en curso
+C 0x8152 suena?
+C 0x8157 el tempo: cada tantos cuadros...
+C 0x815A ...aun no
+C 0x815B el tempo...
+C 0x815E ...vuelve a su cuenta
+C 0x8161 ...la nota acaba?...
+C 0x8166 ...se acaba lo que suena?
+C 0x816B a cero, no menos
+L 0x8173 envolvente                La envolvente: el paso que toca segun lo que le queda a la nota, y su volumen de la tabla del canal
+C 0x8176 acabada?
+C 0x8179 lo que le queda...
+C 0x817C ...por 16...
+C 0x8183 ...entre la duracion
+C 0x8188 ocho bits
+L 0x818A envolvente_div            La division, bit a bit
+C 0x818B el divisor...
+C 0x8190 ...cabe?
+L 0x8196 envolvente_bit            Un bit del cociente
+C 0x819C 16 menos el cociente: el paso de la envolvente
+L 0x819F envolvente_paso           El paso: el volumen esta en la mitad alta o baja del byte de la tabla
+C 0x81A2 16: la envolvente se ha acabado
+C 0x81A5 el paso entre 2: el byte...
+C 0x81A7 el paso par o impar
+C 0x81AB ...de la envolvente
+C 0x81AE la envolvente del canal
+C 0x81B3 el byte...
+C 0x81B4 impar: la mitad baja
+C 0x81B6 ...su mitad alta o baja
+L 0x81BA envolvente_volumen        El volumen del paso por el volumen del canal, entre 16
+C 0x81BC el volumen de la envolvente...
+C 0x81BE ...por el del canal
+C 0x81C2 ocho bits
+L 0x81C4 envolvente_mult           La multiplicacion, bit a bit
+L 0x81CA envolvente_mult_sig       El bit siguiente
+C 0x81CD entre 16
+L 0x81D6 pieza_sigue               Los tres bytes siguientes de la pieza: una nota o una orden (0xF4 a 0xFF)
+C 0x81D9 una orden?
+C 0x81DD 0xFF - A...
+C 0x81DE ...por 2...
+C 0x81E3 ...en la tabla de ordenes 0x8308
+C 0x81E8 la vuelta: otra vez aqui, a por los tres bytes siguientes
+C 0x81ED la rutina
+C 0x81F1 a la orden
+L 0x81F2 nota_pon                  Una nota: A el numero, E la duracion, D hasta la siguiente; duracion 0 es un silencio
+C 0x81F2 la duracion...
+C 0x81F5 ...lo que le queda...
+C 0x81F8 ...y hasta la siguiente
+C 0x81FB duracion 0: silencio
+C 0x8201 mas el transporte
+C 0x8204 ...mas la nota
+C 0x8205 la octava
+L 0x8207 nota_octava               La octava: de 12 en 12
+C 0x8207 de 12 en 12...
+C 0x820E ...una octava mas
+L 0x8210 nota_periodo              El periodo de la nota (0x8330), partido por 2 por cada octava
+C 0x8211 la nota de la tabla...
+C 0x8214 ...0x8330
+C 0x821B las octavas de mas...
+L 0x821F nota_octava_baja          Una octava mas arriba
+C 0x821F ...el periodo a la mitad
+L 0x8226 nota_escribe              El periodo en los registros 2B y 2B+1 del PSG
+C 0x8226 el registro 2B...
+C 0x8228 ...la parte baja...
+C 0x822D ...y la alta
+L 0x8230 nota_envolvente           Si la envolvente es de las de tabla, desde el paso 0
+C 0x8230 la envolvente es de tabla?
+C 0x8236 desde el paso 0
+L 0x823A orden_fin                 Orden 0xFF: la pieza se acaba y el canal calla
+C 0x823B el canal ya no suena
+C 0x823E fuera la vuelta a por mas
+L 0x8242 orden_repite              Orden 0xFC: vuelve a la marca si faltan repeticiones
+C 0x8242 una repeticion menos...
+C 0x8245 ...si es la ultima, sigue
+L 0x8246 orden_vuelve              Orden 0xFD: vuelve a la marca
+C 0x8246 la marca...
+C 0x824C ...por donde va
+L 0x824C orden_salta               Orden 0xF4: salta a DE
+L 0x8252 orden_nada                Orden 0xFE: nada
+L 0x8253 orden_marca               Orden 0xFB: la marca de la repeticion y cuantas veces
+C 0x8253 cuantas veces...
+C 0x8256 ...y la marca es por donde va
+L 0x8263 orden_volumen             Orden 0xFA: el volumen del canal
+C 0x8263 el volumen, de 0 a 15
+L 0x826A envolvente_psg            La envolvente del PSG: volumen 16 y los registros 11-13
+C 0x826A el volumen 16: la envolvente del PSG
+C 0x826F en el registro de volumen
+C 0x8273 la forma en el registro 13
+C 0x8278 los tres bytes siguientes de la pieza...
+C 0x827B ...el periodo en los registros 11...
+C 0x8281 ...y 12
+L 0x8285 orden_envolvente          Orden 0xF9: el tipo de envolvente: del PSG o de la tabla 0x8348
+C 0x8285 el tipo de envolvente...
+C 0x8288 ...bit 4: de tabla
+C 0x828C la tabla: 8 bytes por envolvente...
+C 0x8299 ...la del canal
+L 0x82A0 orden_tempo               Orden 0xF8: el tempo del canal (cuadros por paso)
+L 0x82A4 orden_transporte          Orden 0xF7: el transporte, para los tres canales
+L 0x82A9 orden_mezcla              Orden 0xF6: tono y ruido del canal en el registro 7
+C 0x82A9 los bits de tono y ruido del canal...
+C 0x82AD ...la mascara
+L 0x82B3 orden_mezcla_bit          Los bits del canal
+C 0x82B3 corridos al canal
+L 0x82B7 orden_mezcla_pon          Los escribe
+C 0x82B7 RDPSG 7
+C 0x82BD fuera los del canal...
+C 0x82C0 ...y los nuevos
+C 0x82C3 los puertos de E/S como estaban
+C 0x82C6 WRTPSG 7
+L 0x82CB orden_ruido               Orden 0xF5: el periodo del ruido y una nota de ruido
+C 0x82CB fuera la vuelta...
+C 0x82CD ...y los tres bytes siguientes
+C 0x82D1 la duracion...
+C 0x82D7 ...y hasta la siguiente
+C 0x82DC 0: silencio
+C 0x82E0 el periodo del ruido en el registro 6
+L 0x82E8 pieza_lee                 Los tres bytes siguientes de la pieza: A, E, D
+C 0x82E8 el principio de la pieza...
+C 0x82EE ...mas por donde va
+C 0x82F5 tres mas
+C 0x82FE el canal...
+C 0x8302 A, E y D
+D 0x8308 0x8320 ordenes  Las doce ordenes del motor, de la 0xFF a la 0xF4
+F 0x8308 w2
+D 0x8320 0x8330 canal_inicio  El estado inicial de un canal (desde +2): suena, la duracion, el volumen 15, la envolvente 0x8348...; la copia de 30 bytes sigue por la tabla de los periodos
+D 0x8330 0x8348 periodos  Los periodos de las doce notas de la octava mas baja (do a si)
+F 0x8330 w12
+D 0x8348 0x8388 envolventes  Las ocho envolventes de tabla: 16 pasos de 4 bits (8 bytes cada una)
+F 0x8348 8
+# ======================================================================
+# LA MAQUINA DE ESTADOS
+# ======================================================================
+L 0x8388 estado_inicio             El estado 1, paso 1: cargar los dibujos
+C 0x838E la pista quieta
+L 0x8393 bucle_uno                 Una vuelta del bucle principal
+L 0x8397 cuadro                    La parte de la interrupcion que va con la pantalla: los sprites, el estado, la pista y los mandos
+C 0x839A la tabla de sprites (26) a la VRAM
+C 0x83A6 los sprites vuelven a girar
+C 0x83A9 el estado del juego
+C 0x83AC la pista
+C 0x83AF los mandos
+L 0x83B3 sprites_gira              Los cuatro grupos de tres sprites de los caballos (0xE198) cambian de orden cada cuadro: si coinciden en una linea, parpadean por turnos
+C 0x83B3 el primero...
+C 0x83B6 ...pasa al cuarto
+C 0x83BE el segundo al tercero
+C 0x83C6 el tercero al segundo
+C 0x83CE el cuarto al primero
+C 0x83D6 y de vuelta a 0xE198
+L 0x83E2 estado                    La maquina de estados: 0xE05E (1 los dibujos, 2 la seleccion, 3 el jinete, 4 la apuesta, 5 la demostracion)
+C 0x83E6 el estado...
+C 0x83E9 ...por la tabla
+D 0x83EC 0x83F6 tabla_estados  Los cinco estados: los dibujos, la seleccion, el jinete, la apuesta y la demostracion
+F 0x83EC w5
+L 0x83F6 carga_dibujos             Estado 1: los dibujos del juego a la VRAM y la pantalla de la seleccion a la RAM
+C 0x83F6 la pantalla apagada (DISSCR)
+C 0x83F9 el sonido callado
+C 0x83FC la RAM del juego a cero
+C 0x83FF los sprites fuera
+C 0x8402 los dibujos de los sprites (0xAC1B, 2 KB)...
+C 0x8405 ...a 0x3800
+C 0x840E las casillas: 0xB435...
+C 0x8419 ...y 0xB835, 2 KB...
+C 0x8424 ...a los tres tercios de la tabla de patrones
+C 0x8430 los colores de las casillas: 0xBBF5 (256 bytes)...
+C 0x843B ...y los de la lista 0x85DE...
+C 0x8441 ...a los tres tercios de la tabla de colores
+C 0x844D las letras 0x30-0x5F del primer tercio: negro sobre gris (0x1E)
+C 0x8458 la pantalla de la seleccion en blanco (0x20)...
+C 0x845A ...768 bytes
+C 0x8468 los textos de la seleccion
+C 0x846B las seis filas de arriba de la pantalla de la carrera (0xAC9B) a 0xE200...
+C 0x8476 ...y las dos de abajo (0xAD5B) a 0xE4C0
+C 0x8481 0xF310-0xF31F a cero
+C 0x848A al estado 2, paso 1: la seleccion
+L 0x8491 ram_borra                 La RAM del juego (0xE000-0xE1FF) a cero
+L 0x849C sprites_fuera             Los 26 sprites a Y = 0xC0 (fuera) y la marca de fin 0xD0
+L 0x84AA seleccion_monta           La pantalla de la seleccion en 0xE500: el titulo en kanji, los modos y el copyright
+C 0x84AA el titulo: CASIO y 大障害競馬...
+C 0x84AD ...en la fila 0...
+C 0x84B0 ...14 casillas por 6 filas
+C 0x84B6 PLAYER SELECT
+C 0x84C1 A PLAY-JOCKEY MODE
+C 0x84CC B 1PLAYER BET MODE
+C 0x84D7 C 2PLAYERS BET MODE
+C 0x84E2 D 3PLAYERS BET MODE
+C 0x84ED E 4PLAYERS BET MODE
+C 0x84F8 PUSH TRIGGER 1
+C 0x8503 TO START GAME
+C 0x850E COPYRIGHT 1984 @ CASIO
+D 0x851A 0x85B8 textos_seleccion  Los textos de la seleccion, en ASCII: PLAYER SELECT, los cinco modos, PUSH TRIGGER 1 TO START GAME y el copyright (la @ se dibuja como ©, ^ como -)
+F 0x851A 13,19,19,19,19,19,14,14,22
+L 0x85B8 copia_bloque              Copia un bloque de C filas de B bytes desde HL a DE, que es una pantalla de 32 de ancho
+C 0x85BA una fila
+C 0x85C1 DE a la fila siguiente
+L 0x85CD colores_lista             La lista de colores de HL: parejas (color, cuantos grupos de 8 bytes) hasta un 0, 0
+C 0x85CD el color...
+C 0x85CF ...y cuantas casillas
+C 0x85D1 0, 0: se acaba
+D 0x85DE 0x8616 colores_casillas  Los colores de las casillas de la carrera de hierba: parejas (color, cuantas casillas)
+F 0x85DE 2
+L 0x8616 vram_tres                 Copia BC bytes de HL a la VRAM DE y a los dos tercios siguientes (DE + 0x800, + 0x1000)
+L 0x8636 azar                      El numero al azar de 0xE800: x 5 + 1, a la mitad y mas el registro R
+C 0x863D x 5...
+C 0x8640 ...+ 1
+C 0x8643 mas R, que cambia con cada instruccion
+# ======================================================================
+# LA SELECCION
+# ======================================================================
+L 0x864A estado_seleccion          Estado 2: la seleccion de modo
+C 0x864A el paso...
+C 0x864D ...por la tabla
+D 0x8650 0x8656 pasos_seleccion  Los tres pasos: la pantalla, la espera y la eleccion
+F 0x8650 w3
+L 0x8656 seleccion_pantalla        Paso 1: la pantalla de la seleccion a la VRAM
+C 0x8656 la pantalla apagada
+C 0x865F las letras grandes del titulo (0xB735) en las casillas 0x60-0x7F
+C 0x866B sus colores: rojo sobre negro (0x60)...
+C 0x867E ...en los tres tercios
+C 0x8681 blanco sobre negro (0xF1)...
+C 0x868E ...las casillas 0x30-0x5F
+C 0x869A la pantalla montada (0xE500) a la tabla de nombres
+C 0x86A6 al paso 2
+L 0x86AD seleccion_espera          Paso 2: la pantalla encendida, la demostracion preparada y la cuenta de 1024 cuadros
+C 0x86AD ENASCR
+C 0x86B0 la pista quieta
+C 0x86B4 el modo, 0xFF: la demostracion si nadie toca nada
+C 0x86B8 el sprite del cursor
+C 0x86C3 1024 cuadros (unos 17 segundos)
+C 0x86C9 al paso 3
+L 0x86D0 seleccion_toca            Si se mueve la palanca, la cuenta vuelve a empezar; luego la cuenta atras
+C 0x86D0 arriba o abajo?
+C 0x86D7 otra vez 1024
+L 0x86DD seleccion_cuenta          Un cuadro menos
+D 0x86E1 0x86E5 sprite_cursor  El cursor de la seleccion: Y 0x3F, X 0x38, dibujo 0x0C, color 1
+F 0x86E1 4
+L 0x86E5 seleccion_elige           Paso 3: el cursor con la palanca, y el boton 1 elige; si se acaba la cuenta, la demostracion
+C 0x86E5 se acaba la cuenta?
+C 0x86EB el boton 1?
+C 0x86EE no: el cursor
+C 0x86F2 la opcion es el modo
+C 0x86F8 la carrera 1 y las apuestas
+L 0x86FB carrera_pantalla          La pantalla de la carrera: las letras, el marcador de abajo y el estado que toca
+C 0x86FB la pantalla apagada
+C 0x86FE los sprites fuera
+C 0x8701 las letras 0x30-0x5F: negro sobre gris (0x1E)
+C 0x871A las casillas 0x60-0x7F: 0xB835 y 0xB935
+C 0x8739 sus colores: 0x15 las casillas 0x60-0x6F...
+C 0x8743 ...y 0x9F las 0x70-0x7F
+C 0x8756 la pantalla de la carrera (0xE200, montada al arrancar) a la tabla de nombres
+C 0x8762 el modo
+C 0x8766 el jinete: los carteles de BONUS
+C 0x8769 H = 1: el paso 1 del estado...
+C 0x876B ...5, la demostracion
+C 0x876D 0xFF?
+C 0x876F con su cartel
+C 0x8774 3: el jinete...
+C 0x877A ...4: la apuesta
+L 0x877C carrera_estado            El estado y su paso
+L 0x8780 cartel_demostracion       DEMONSTRATION en el recuadro de arriba
+C 0x8782 el recuadro en blanco
+C 0x8785 DEMONSTRATION...
+C 0x8788 ...en la fila 4
+D 0x8794 0x87A1 texto_demostracion  DEMONSTRATION
+L 0x87A1 cartel_bonus              El recuadro del jinete: 1ST BONUS 1000 y 2ND BONUS 500
+C 0x87A5 la fila 3...
+C 0x87B1 ...y la 4
+L 0x87BF recuadro_borra            Las cuatro filas del recuadro de arriba (0x1840-0x18BF), cuatro veces 4 casillas 0x90
+L 0x87D8 recuadro_fila             Cuatro casillas 0x90 en HL (FILVRM)
+D 0x87E1 0x8803 textos_bonus  1ST BONUS 1000 y 2ND BONUS 500 (los numeros son casillas propias, 0x80-0x89)
+F 0x87E1 17
+L 0x8803 apuestas_empieza          La carrera 1; cada jugador que apuesta empieza con su marca a 1
+C 0x8803 la carrera 1
+C 0x8808 cuantos jugadores...
+C 0x880B ...0: el jinete
+C 0x880F una marca cada 4 bytes desde 0xE031
+L 0x8815 apuestas_empieza_uno      Un jugador
+L 0x881B seleccion_cursor          El cursor de la seleccion: la palanca mueve la opcion (0-4) y el sprite parpadea
+C 0x881B cinco opciones
+C 0x8820 la Y del cursor...
+C 0x8822 ...de la tabla 0x8836
+C 0x882A cada 4 cuadros...
+C 0x8830 ...fuera
+D 0x8836 0x883B y_cursor  La Y del cursor en cada opcion: A a E
+F 0x8836 5
+L 0x883B opcion_mueve              La opcion 0xE063 con la palanca: abajo uno mas, arriba uno menos, entre 0 y B - 1; deja en C la nueva y en E la vieja
+C 0x883B la palanca con repeticion...
+C 0x883E ...cuenta solo un cuadro de cada 8
+C 0x8847 o la recien pulsada
+C 0x884B la opcion
+C 0x8850 los bits de la palanca, del 7 (derecha) abajo...
+C 0x8851 ...bit 6: abajo
+C 0x8854 bit 5: arriba
+C 0x8857 la primera?
+L 0x885E opcion_baja               Una mas, si no es la ultima
+L 0x8864 opcion_guarda             La opcion nueva
+# ======================================================================
+# EL JINETE (estado 3)
+# ======================================================================
+L 0x8866 estado_jinete             Estado 3: el modo A, el jugador lleva un caballo
+C 0x8866 el paso...
+C 0x8869 ...por la tabla
+D 0x886C 0x8876 pasos_jinete  Los cinco pasos: la carrera nueva, la eleccion del caballo, el final de las nueve, su espera y la salida
+F 0x886C w5
+L 0x8876 jinete_carrera            Paso 1: los caballos a la salida, los premios de la carrera y su musica
+C 0x8876 los cuatro caballos al principio
+C 0x8879 los premios de la carrera
+C 0x887C 1024 cuadros para elegir
+C 0x8882 el cursor en el caballo 1
+C 0x8886 la musica de la primera carrera
+C 0x8889 al paso 2
+L 0x88AF premios                   Los premios de la carrera (0xE000): 1ST en la fila 3 (0x88E6) y 2ND en la 4 (0x88EF), dos cifras y los ceros fijos
+C 0x88AF la carrera...
+C 0x88B2 ...menos 1
+C 0x88B6 el del primero
+C 0x88BB en la fila 3
+C 0x88C3 el del segundo...
+C 0x88C8 ...en la fila 4
+L 0x88CB premio_pinta              Las dos cifras BCD de (DE) en HL: un 0 a la izquierda va en blanco
+C 0x88CB las decenas...
+C 0x88D3 un 0: la casilla en blanco (0x10 + 0x80)
+L 0x88D7 premio_cifra              Las cifras son las casillas 0x80-0x89
+C 0x88DD las unidades
+D 0x88E6 0x88FC premios_tabla  Los premios en BCD por carrera (con dos ceros detras): 1ST de 1000 a 9000 y 2ND de 500 a 4500; detras, cuatro bytes (0x50, 0xC0, 0x00, 0x08) que estas rutinas no leen: el indice llega a 0x88F7
+F 0x88E6 9,9,4
+L 0x88FC caballos_salida           Los cuatro caballos al paso 1 de su estado 1 (la salida), la pista empieza, el sonido callado y la apuesta preparada
+C 0x88FC estado 1, paso 1...
+C 0x88FF ...en los cuatro caballos
+C 0x890B la pista: empieza
+C 0x8910 los sprites fuera
+C 0x8913 el sonido callado
+C 0x891A las fuerzas y las cuotas (0xA8CC)
+L 0x8922 musica_primera            La musica de la primera carrera, en los canales 0 y 1 (0xAD9B y 0xBD89)
+C 0x8922 solo en la carrera 1
+L 0x8939 jinete_elige              Paso 2: HORSE SELECT; la palanca mueve el cursor por los cuatro caballos y el boton 1 elige (o se acaba la cuenta)
+C 0x8939 la pantalla encendida
+C 0x893C espera a que acabe la musica
+C 0x8940 HORSE SELECT JOY / START PUSH TRIG 2
+C 0x8943 la cuenta: si se acaba, elige solo
+C 0x8949 el boton 1?
+C 0x8950 cuatro caballos: la palanca
+C 0x8955 ha cambiado?
+C 0x8959 el color del numero del caballo de antes...
+C 0x8963 ...a blanco
+L 0x8965 jinete_cursor             El numero del caballo elegido parpadea: blanco y negro cada 4 cuadros
+C 0x8965 el sprite del numero del caballo
+C 0x896F blanco
+C 0x8977 negro
+L 0x897A jinete_elegido            El caballo: la opcion + 1; los numeros a blanco y al paso 5
+C 0x897A el caballo...
+C 0x897E ...del jugador
+C 0x8981 los dos sprites 0 y 1, a Y 0x0F...
+C 0x8989 ...los cuatro numeros de los caballos en blanco
+C 0x8997 la fuerza de su caballo para la barra (0xF0E7)
+C 0x899A al paso 5
+L 0x89A1 cartel_horse_select       HORSE SELECT JOY / START PUSH TRIG 2 en el centro de la pista
+C 0x89A1 HORSE SELECT JOY...
+C 0x89A4 ...en la fila 11
+C 0x89AD START PUSH TRIG 2...
+C 0x89B0 ...en la fila 13
+L 0x89BA cartel_borra              El cartel del centro, borrado con hierba (0x89D3)
+D 0x89D3 0x89E7 hierba  Veinte casillas de hierba para borrar un cartel
+F 0x89D3 20
+L 0x89E7 caballos_corren           Los cuatro caballos al paso 2 de su estado 1, la pista corre y sin resultado
+C 0x89F6 la pista: corre
+C 0x89FB sin resultado
+L 0x8A00 jinete_fin                Paso 3: las nueve carreras hechas: RACE END, su musica y a la carrera 1
+C 0x8A00 el sprite 0 fuera
+C 0x8A05 otra vez la carrera 1
+C 0x8A0A la musica
+C 0x8A0D RACE END
+C 0x8A10 512 cuadros
+C 0x8A16 al paso 4 del estado 3
+L 0x8A1D musica_fin                La musica de las nueve carreras hechas, en los canales 0 y 1 (0xBEDC y 0xBF07)
+L 0x8A2E jinete_fin_espera         Paso 4: la musica y la cuenta, y otra vez desde el paso 1
+C 0x8A2E la pista y el marcador siguen
+C 0x8A31 suena?
+C 0x8A35 la cuenta
+C 0x8A39 sin cartel
+C 0x8A3C al paso 1
+L 0x8A43 suena                     NZ si alguno de los tres canales suena
+L 0x8A4F cuenta_baja               La cuenta 0xE05C, uno menos; Z si llega a 0
+L 0x8A59 jinete_sale               Paso 5: el boton 2 sale; la fanfarria y la carrera sigue en el estado 4, paso 3
+C 0x8A59 el boton 2?
+C 0x8A5E la fanfarria
+C 0x8A61 sin cartel
+C 0x8A64 el paso 3...
+C 0x8A68 ...del estado 4: la carrera
+# ======================================================================
+# LA APUESTA Y LA CARRERA (estado 4)
+# ======================================================================
+L 0x8A6D estado_carrera            Estado 4: los modos B a E (la apuesta) y la carrera de todos los modos
+C 0x8A6D el paso...
+C 0x8A70 ...por la tabla
+D 0x8A73 0x8A85 pasos_carrera  Los nueve pasos: la salida, la apuesta, la fanfarria, la espera, la carrera, el final, la siguiente, el final de las nueve y el pago
+F 0x8A73 w9
+L 0x8A85 apuesta_salida            Paso 1: los caballos a la salida, los cursores de la apuesta y la musica
+C 0x8A88 los dos cursores de la apuesta, a Y 0x0F
+C 0x8A90 la musica de la primera carrera
+C 0x8A93 al paso 2
+L 0x8A98 apuesta                   Paso 2: BET MODE / START PUSH TRIG 2; las apuestas (0xA383) hasta que se pulsa el boton 2
+C 0x8A98 la pantalla encendida
+C 0x8A9B espera a que acabe la musica
+C 0x8A9F BET MODE / START PUSH TRIG 2
+C 0x8AA6 las apuestas
+C 0x8AAD sigue la apuesta (bit 7 de 0xF0C9)?
+C 0x8AB2 el sonido callado
+C 0x8AB5 sin cartel
+C 0x8AB8 la fanfarria
+C 0x8ABB al paso 3
+L 0x8AC0 cartel_bet_mode           BET MODE / START PUSH TRIG 2
+D 0x8AD9 0x8AE1 texto_bet_mode  BET MODE (0xE2 es el espacio sobre la hierba)
+L 0x8AE1 fanfarria                 La fanfarria de la salida, en los canales 0 y 1 (0xBDCF y 0xBE02)
+L 0x8AF1 carrera_fanfarria         Paso 3: cuando acaba la fanfarria, 32 cuadros y el sonido de la salida (0xBE8E, canal 2)
+C 0x8AF1 suena?
+C 0x8AF5 32 cuadros
+C 0x8AFE la salida
+C 0x8B06 al paso 4
+L 0x8B0B carrera_sale              Paso 4: la musica de la carrera (0xBE7F, canal 0) y los caballos corren
+C 0x8B0B la cuenta
+C 0x8B0F la musica de la carrera
+C 0x8B17 a correr
+C 0x8B1A al paso 5
+L 0x8B1F carrera_corre             Paso 5: la carrera; en la demostracion, el boton 1 vuelve a la seleccion; al llegar los dos primeros, el pago
+C 0x8B1F la demostracion?
+C 0x8B26 el boton 1?
+C 0x8B2D las apuestas y los carteles
+C 0x8B30 el resultado (0x80 + la pareja ganadora)
+C 0x8B35 la pareja ganadora...
+C 0x8B37 ...para el pago
+C 0x8B3A el pago empieza
+C 0x8B3F los cuatro sprites de las apuestas, fuera
+C 0x8B4D al paso 9
+L 0x8B52 carrera_apuestas          Cada cuadro de la carrera: el parpadeo de la apuesta, las fuerzas, el pago y el cartel de la demostracion
+C 0x8B56 la pareja que gana parpadea
+C 0x8B59 el ordenador lleva sus caballos y el jugador el suyo
+C 0x8B5C el pago, una cuenta cada dos cuadros
+C 0x8B5F DEMONSTRATION parpadea
+L 0x8B67 demostracion_cartel       En la demostracion, el cartel DEMONSTRATION aparece y desaparece cada 16 cuadros
+C 0x8B67 la demostracion?
+C 0x8B6C DEMONSTRATION...
+C 0x8B6F ...o cada 16 cuadros...
+C 0x8B76 ...en blanco
+L 0x8B79 demostracion_cartel_pon   En la fila 4
+D 0x8B83 0x8B90 cartel_blanco  Trece casillas 0x90: el recuadro en blanco
+L 0x8B90 a_seleccion               Vuelve a la seleccion: el sonido callado y el estado 2, paso 1
+L 0x8BA0 carrera_final             Paso 6: cuando los caballos se han parado y calla la musica, el final: GAME OVER, la carrera siguiente o RACE END
+C 0x8BA3 todos los caballos parados?
+C 0x8BA7 suenan los canales 1 o 2?
+C 0x8BAF el sonido callado
+C 0x8BB2 la pista y los caballos, quietos
+C 0x8BC2 el modo
+C 0x8BC7 la demostracion: a la seleccion
+C 0x8BCB la apuesta
+C 0x8BCE el jinete: ha llegado el ultimo?...
+C 0x8BD3 ...GAME OVER
+C 0x8BD6 la carrera 9?
+L 0x8BDE carrera_siguiente         PUSH TRIG 2 y la musica de la llegada (0xBF7D y 0xBF8A); al paso 7
+C 0x8BDE PUSH TRIG 2
+C 0x8BF1 al paso 7
+L 0x8BF6 jinete_nueve              El jinete despues de la carrera 9: el estado 3, paso 3 (RACE END)
+L 0x8BFF apuesta_final             La apuesta: si nadie tiene dinero, GAME OVER; despues de la carrera 9, RACE END
+C 0x8BFF el dinero de los cuatro jugadores (16 bytes)...
+C 0x8C09 ...a cero: GAME OVER
+C 0x8C0B la carrera 9?
+C 0x8C12 la musica de las nueve...
+C 0x8C15 ...RACE END...
+C 0x8C18 ...512 cuadros...
+C 0x8C1E ...y al paso 8
+L 0x8C23 game_over                 GAME OVER, su musica, 512 cuadros y al paso 8
+L 0x8C34 cartel_game_over          GAME OVER en la fila 11 y los sprites fuera
+D 0x8C44 0x8C4D texto_game_over  GAME OVER
+L 0x8C4D musica_game_over          La musica de GAME OVER, en los canales 0 y 1 (0xBE56 y 0xBE6C)
+L 0x8C5E cartel_push_trig          PUSH TRIG 2 en la fila 11
+L 0x8C6B caballos_quietos          Z si los cuatro caballos estan en el estado 0 (parados)
+L 0x8C7D carrera_otra              Paso 7: cuando calla la musica, el boton 2 pasa a la carrera siguiente
+C 0x8C80 suena?
+C 0x8C84 el boton 2?
+C 0x8C89 el pago acabado
+C 0x8C8D sin cartel
+C 0x8C90 la carrera siguiente
+C 0x8C94 el jinete?
+C 0x8C9A la apuesta: al paso 1 del estado 4
+L 0x8CA1 cartel_race_end           RACE END en la fila 11
+D 0x8CAE 0x8CB6 texto_race_end  RACE END
+L 0x8CB6 jinete_otra               El jinete: el sprite 0 fuera y al paso 1 del estado 3
+L 0x8CC2 carrera_vuelve            Paso 8: cuando calla la musica y se acaba la cuenta, a la seleccion
+L 0x8CD4 carrera_pago              Paso 9: espera a que acabe el pago (bit 7 de 0xF0D0) y suena lo que toque; al paso 6
+C 0x8CD7 el pago...
+C 0x8CDA ...acabado?
+C 0x8CDD el modo
+C 0x8CE3 un solo jugador: nada
+C 0x8CE6 alguien ha cobrado (bit 1)?...
+C 0x8CEA ...el sonido de cobrar (0xBE49) en los canales 1 y 2
+L 0x8CFA carrera_pago_fin          Al paso 6
+L 0x8CFF jinete_puesto             El jinete: el primero o el segundo tienen su musica (0xBF32 y 0xBF54); el primero de la carrera 9, la de 0xBF97 y 0xBFB9
+C 0x8CFF el puesto del jugador
+L 0x8D0A jinete_premio             La musica del premio
+L 0x8D1C jinete_primero            El primero: en la carrera 9, la musica de las nueve ganadas
+C 0x8D1C la carrera 9?
+# ======================================================================
+# LA DEMOSTRACION (estado 5)
+# ======================================================================
+L 0x8D35 estado_demostracion       Estado 5: la demostracion, la carrera 9 con el ordenador
+D 0x8D3B 0x8D41 pasos_demostracion  Los tres pasos: la carrera 9, la pantalla y la espera
+F 0x8D3B w3
+L 0x8D41 demostracion_salida       Paso 1: la carrera 9 y los caballos a la salida
+C 0x8D41 la carrera 9 (tierra, 3600 m)
+L 0x8D4E demostracion_pantalla     Paso 2: la pantalla encendida y 128 cuadros
+L 0x8D5C demostracion_espera       Paso 3: el cartel parpadea; al acabar la cuenta, la fanfarria y la carrera (estado 4, paso 3)
+# ======================================================================
+# LA PISTA
+# ======================================================================
+L 0x8D6F pista                     La pista (0xE06C): 1 la monta, 2 la hace correr
+D 0x8D79 0x8D7D pasos_pista  Los dos pasos: montar y correr
+F 0x8D79 w2
+L 0x8D7D pista_monta               La pista de la carrera: los colores, los obstaculos, el cartel de arriba, los arbustos y los carteles de la distancia
+C 0x8D7D la velocidad de la pista: 0x60
+C 0x8D87 cada 5 pasos, una casilla
+C 0x8D8C la carrera de la tabla 0x8DA3
+C 0x8D92 montada
+L 0x8D97 carrera_tipo              El byte de la carrera en 0x8DA3: bit 7 hierba, bits 4-6 los obstaculos, bits 0-3 la distancia
+D 0x8DA3 0x8DAC carreras  Las nueve carreras: bit 7 hierba (si no, tierra), bits 4-6 la serie de obstaculos (0x8E5A), bits 0-3 la distancia (0x9017)
+F 0x8DA3 9
+L 0x8DAC pista_pinta               Los colores, los obstaculos, el cartel, la salida y la pista entera a la VRAM
+C 0x8DAD los colores de la hierba o de la tierra
+C 0x8DB2 la serie de obstaculos
+C 0x8DB7 el cartel de la carrera
+C 0x8DBC la salida y la pista en la RAM
+C 0x8DC0 a la VRAM
+L 0x8DC4 pista_colores             Los colores de las casillas del suelo: los de la hierba (0x85EE) o los de la tierra (0x8E29)
+C 0x8DC5 la hierba...
+C 0x8DCD ...o la tierra
+C 0x8DD0 la lista de colores...
+C 0x8DD6 ...a los tres tercios desde la casilla 0xC1
+C 0x8DE6 los colores de las cosas sueltas: los de la hierba (0xBC8D)...
+C 0x8DEB ...o los de la tierra (0xBCF5)...
+C 0x8DF6 ...a las casillas 0x13-0x1A
+C 0x8E06 las letras sobre el suelo: negro sobre verde (0x13) o sobre rojo (0x19)...
+C 0x8E0C ...las casillas 0x30-0x5F del tercio de en medio
+C 0x8E18 la casilla 0 del primer tercio, del color del suelo: 0x33 o 0x99
+D 0x8E29 0x8E49 colores_tierra  Los colores de las casillas de la carrera de tierra: parejas (color, cuantas casillas)
+F 0x8E29 2
+L 0x8E49 pista_serie               La serie de obstaculos: 0x8E5A + (bits 4-6) x 12
+D 0x8E5A 0x8EAE series  Las siete series de obstaculos: doce bytes, uno por cada 16 pasos de la pista, con la fila de 0x933D que toca
+F 0x8E5A 12
+L 0x8EAE cartel_carrera            El cartel de la carrera arriba a la derecha (n RACE, GRASS o DIRT, la distancia): 5 filas de 4 casillas de 0x8EDC
+C 0x8EB4 la carrera x 20
+C 0x8EBF en la columna 25
+L 0x8EC4 cartel_carrera_fila       Una fila
+D 0x8EDC 0x8F90 carteles_carrera  Los carteles de las nueve carreras: 5 filas de 4 casillas cada uno
+F 0x8EDC 4
+L 0x8F90 pista_salida              La pista desde la salida: la distancia, el fondo al azar, los arbustos y las primeras columnas
+C 0x8F90 la distancia de la tabla 0x9017...
+C 0x8F9A ...lo que queda de carrera
+C 0x8FA0 el suelo de la pista (12 filas) con casillas al azar
+C 0x8FA9 y el de la columna que entra
+C 0x8FB2 los arbustos de la salida
+C 0x8FBB las seis columnas de cinco casillas de la pista
+L 0x8FC3 pista_salida_col          Una columna
+C 0x8FDF la ultima, mas estrecha
+C 0x8FEC el borde de la columna que entra
+C 0x8FF7 la valla de abajo: 0xE0, 0xE1...
+L 0x8FFC pista_valla               ...16 veces
+C 0x9004 la linea de la salida (0xEA) en las 12 filas
+L 0x9009 pista_linea               Una fila
+D 0x9012 0x901C pista_borde  La columna de la valla (0xE0, 0xE1) y las cinco distancias: lo que queda de carrera (de 25 m en 25 m) para 1200, 1600, 2400, 3200 y 3600 m
+F 0x9012 5
+L 0x901C suelo_azar                BC casillas desde HL: el suelo, una de 0xE2-0xE5 al azar
+L 0x902C arbustos                  Los arbustos del paso A de la pista: el nibble de 0x92DD; de 0 a 3 el tipo de arbusto (0x93ED), 4 o mas un cartel de distancia (0x942D); A = 1 si hay cartel
+C 0x902C la segunda mitad?
+C 0x9035 el nibble del paso
+C 0x9048 un cartel?
+C 0x904E 16 casillas por arbusto
+C 0x905A sin cartel: A = 0
+C 0x905F el cartel: 4 casillas...
+C 0x9066 ...en la segunda mitad de la pista, 12 carteles mas alla (2400, 3200 y 3600 m)
+C 0x9070 los carteles (0x942D)
+L 0x9045 arbustos_tipo             El nibble
+L 0x904E arbustos_dibujo           La direccion del arbusto
+L 0x906C arbustos_cartel           La direccion del cartel
+L 0x9078 arbustos_entran           Los arbustos (tres filas de 5) en la columna que entra (0xEF80) y el cartel encima, si lo hay
+L 0x909D arbustos_pon              Lo mismo en la columna BC de la pista montada
+L 0x90CB arbustos_estrecho         La ultima columna, de 2 casillas
+L 0x90EC pista_vram                La pista montada (0xED00, 16 filas) a la VRAM, desde la fila 6
+L 0x90F9 pista_corre               Cada cuadro: las fuerzas, la marca de la carrera, y la pista corre segun la velocidad; cada 5 pasos, una casilla nueva
+C 0x90FD las fuerzas de los caballos
+C 0x9100 los sprites de 0xE1C8 (0xA6E3)
+C 0x9107 la velocidad...
+C 0x910A ...suma la cuenta de la pista
+C 0x910D los octavos de casilla...
+C 0x9117 ...una casilla entera?
+C 0x911A la pista, una casilla a la derecha (512 bytes)
+C 0x9125 la columna que entra a la izquierda: 16 filas
+L 0x912D pista_entra               Una fila
+C 0x913D la columna de los arbustos, una tambien
+C 0x9148 a la VRAM
+C 0x914B cada 5 casillas...
+C 0x9152 ...un paso menos de carrera
+C 0x9157 pasa de 0...
+C 0x915C ...a 0xBF (la recta de la meta)
+L 0x915E pista_paso                Los arbustos y los obstaculos del paso nuevo; si es el 0xBB, la pista se para
+C 0x9164 el ultimo paso
+C 0x9167 la pista se para...
+C 0x916B ...y queda quieta
+L 0x9170 pista_columna             Los arbustos y el obstaculo del paso en la columna que entra
+L 0x9183 obstaculo                 El obstaculo del paso A: la fila de la serie (0xE072) que toca a los 16 pasos y su columna en 0x933D
+C 0x9184 los 16 pasos...
+C 0x918D ...en la serie: la fila...
+C 0x9192 ...de 16 bytes
+C 0x919D el paso dentro de la fila
+L 0x91A6 obstaculo_pon             La columna sin obstaculo y, si lo hay (1 la meta, 2 una valla, 3 una ria, 4 las dos, 5 cosas sueltas), lo pinta
+C 0x91A7 el suelo y el borde
+C 0x91AD el tipo...
+C 0x91AF ...por la tabla
+D 0x91B2 0x91BC tabla_obstaculos  Los cinco obstaculos: la meta, la valla, la ria, la ria y la valla, y las cosas sueltas
+F 0x91B2 w5
+L 0x91BC obstaculo_meta            La meta: GOAL en vertical, 3 casillas por 12 filas (0x91C9)
+D 0x91C9 0x91ED dibujo_meta  La meta: 12 filas de 3 casillas, con G, O, A y L
+F 0x91C9 3
+L 0x91ED obstaculo_valla           La valla: un poste a rayas de 13 casillas (0x91FA)
+D 0x91FA 0x9208 dibujo_valla  La valla: 13 casillas en una columna
+L 0x9208 obstaculo_ria             La ria: 5 casillas por 12 filas (0x9215)
+D 0x9215 0x9251 dibujo_ria  La ria: 12 filas de 5 casillas
+F 0x9215 5
+L 0x9251 obstaculo_ria_valla       La ria con la valla
+L 0x9258 obstaculo_sueltas         Dos cosas sueltas al azar en la pista (solo en las carreras pares)
+C 0x9258 una carrera impar?
+L 0x9265 obstaculo_suelta          Una: el sitio (0x929D) y el dibujo (0x92AD) al azar
+C 0x9265 uno de los ocho sitios...
+C 0x9275 ...uno de los cuatro dibujos
+C 0x9283 se pone? (0x9295)
+D 0x9295 0x92B5 sueltas  Los umbrales y si se pone (siempre), los ocho sitios de la columna y los cuatro dibujos de dos casillas (0x13-0x1A)
+F 0x9295 4,4,w8,2
+L 0x92B5 copia_columna             Copia C filas de B bytes desde HL a DE, que es la columna de 5 de ancho
+L 0x92CA columna_limpia            La columna que entra: el suelo al azar y el borde
+D 0x92DD 0x933D tabla_arbustos  Los arbustos y carteles de los 192 pasos de la pista: un nibble por paso
+F 0x92DD 16
+D 0x933D 0x93ED tabla_obstaculos_filas  Las once filas de obstaculos de 16 pasos: 0 nada, 1 la meta, 2 la valla, 3 la ria, 4 las dos, 5 cosas sueltas
+F 0x933D 16
+D 0x93ED 0x942D dibujos_arbustos  Los cuatro arbustos: 3 filas de 5 casillas (y una de relleno)
+F 0x93ED 16
+D 0x942D 0x9469 dibujos_carteles  Los carteles de distancia: 100 m a 900 m y los de la salida (1200, 1600, 2400, 3200 y 3600 m), 4 casillas cada uno
+F 0x942D 4
+# ======================================================================
+# LOS MANDOS Y EL MARCADOR
+# ======================================================================
+L 0x9469 mandos                    Los mandos: la palanca (0xE003, un bit por direccion), el boton 1 (0xE004) y el boton 2 (0xE005); lo recien pulsado en 0xE009-0xE00B
+C 0x9469 los de este cuadro pasan a ser los de antes
+C 0x9474 la palanca del mando 1...
+C 0x947C ...o la del 2...
+C 0x9484 ...o los cursores
+L 0x9489 mandos_palanca            La direccion (0-8) a bits por la tabla 0x9507: 0x20 arriba, 0x40 abajo, 0x10 izquierda, 0x80 derecha
+C 0x9494 el boton 1 del mando 1...
+C 0x949C ...o del 2...
+C 0x94A4 ...o la barra
+L 0x94A9 mandos_boton2             El boton 2: el de los mandos 1 o 2 (GTTRIG 3 y 4) o GRAPH en el teclado (fila 6, bit 2)
+C 0x94AC el boton 2 del mando 1...
+C 0x94B4 ...o del 2...
+C 0x94BC ...o la fila 6 del teclado (SNSMAT)...
+C 0x94C1 ...GRAPH pulsada?
+L 0x94C8 mandos_boton2_pon         0xFF si esta pulsado
+C 0x94CB lo recien pulsado: lo de ahora...
+C 0x94D5 ...de los tres
+L 0x94D7 mandos_nuevo              ...y no lo de antes
+C 0x94E4 la repeticion de la palanca: cuatro cuentas de 32 cuadros (0xE00D), una por direccion
+C 0x94E9 el bit de la direccion
+L 0x94EF mandos_repite             Si no se pulsa, la cuenta vuelve a 32; si llega a 0, la direccion cuenta como pulsada y la cuenta se queda en 1
+C 0x94F2 suelta: la cuenta a 32
+L 0x94F4 mandos_cuenta             Un cuadro menos
+C 0x94F7 a 0: se queda en 1...
+C 0x94F9 ...y la direccion cuenta
+L 0x94FD mandos_sig                La direccion siguiente
+C 0x9502 la palanca con repeticion
+D 0x9507 0x9510 palanca_bits  GTSTCK (0-8) a bits: nada, arriba, arriba-derecha, derecha, abajo-derecha, abajo, abajo-izquierda, izquierda, arriba-izquierda
+F 0x9507 9
+L 0x9510 cuotas_pinta              Las seis cuotas (0xE011, BCD) en la fila 1, debajo de 1-2, 1-3, 1-4, 2-3, 2-4 y 3-4; el 0 de la izquierda, en blanco
+C 0x9510 la fila 1, columna 5
+C 0x9516 seis cuotas
+L 0x9518 cuotas_una                Una: las decenas...
+C 0x951F un 0?
+C 0x9521 ...en blanco (0xDF)
+L 0x9525 cuotas_cifra              Las cifras son las casillas 0x60-0x69
+L 0x9527 cuotas_unidades           ...y las unidades
+C 0x9533 la siguiente, tres casillas mas alla
+L 0x9539 apuestas_pinta            Las apuestas de los jugadores (0xE017, seis por jugador) en el recuadro de arriba: una fila por jugador
+C 0x9539 la fila 2
+C 0x953C las apuestas
+C 0x953F el modo: el jinete...
+C 0x9546 ...y la demostracion no apuestan
+L 0x9549 apuestas_fila             Un jugador: seis apuestas de dos cifras
+L 0x954C apuestas_una              Una: las decenas, un 0 en blanco...
+L 0x9557 apuestas_decenas          Las cifras de las apuestas son las casillas 0x80-0x89 (0x90 en blanco)
+C 0x955D ...las unidades: si no hay apuesta, en blanco
+L 0x9565 apuestas_unidades         Las unidades
+L 0x9567 apuestas_cifra            La cifra
+C 0x9571 la fila siguiente
+L 0x957B vram_pon                  WRTVRM sin tocar HL, DE ni BC
+# ======================================================================
+# LA CARRERA, CADA CUADRO
+# ======================================================================
+L 0x9585 carrera_cuadro            La parte de la interrupcion que mueve la carrera: los pasos, la camara, el cansancio, los caballos, los jinetes, la meta y los sonidos
+C 0x9585 un cuadro mas
+C 0x9589 el paso de cada caballo y lo que pide el jugador
+C 0x958C la velocidad de la pista
+C 0x958F el cansancio
+C 0x9592 los cuatro caballos
+C 0x9595 los cuatro jinetes
+C 0x9598 la luz de la meta
+C 0x959B los sonidos de la carrera
+C 0x959E la marca del puesto
+L 0x95A2 caballos_pasos            La velocidad de cada caballo (0xE077) por los bits 2-4 de 0xE041 (0x961F); y en 0xE13F lo que hace: el boton 2 salta, arriba y abajo cambian de calle
+C 0x95A2 los cuatro caballos (4 bytes cada uno)
+C 0x95A5 lo que hace cada uno
+C 0x95A9 las velocidades
+L 0x95AE caballos_pasos_uno        Uno: el byte entero...
+C 0x95B2 ...los bits 2-4: el paso
+C 0x95BB la velocidad de la tabla
+C 0x95C6 en 0xE077
+C 0x95CC de lo que hacen, solo los bits 5-7
+L 0x95D1 caballos_hace_limpia      Uno
+C 0x95D8 el caballo del jugador?
+C 0x95E2 el suyo
+C 0x95E6 solo el bit 5 (el latigo)...
+C 0x95EA ...y el bit 0: es el del jugador
+C 0x95EC no en la salida ni en la recta final?
+C 0x95F4 el boton 2...
+C 0x95FA ...bit 4: salta
+L 0x95FC caballos_calle            Arriba o abajo: bit 7 cambia de calle, bit 6 hacia abajo
+L 0x960B caballos_hace_pasa        Lo que hace cada uno, a su byte +0x19
+L 0x9613 caballos_hace_uno         Uno
+D 0x961F 0x9627 velocidades  Las ocho velocidades de los caballos, por el paso (bits 2-4 de 0xE041)
+F 0x961F 8
+L 0x9627 camara                    La velocidad de la pista (0xE06D): la del caballo que ha llegado al borde izquierdo; luego baja hasta 0x60. Y lo rapido que va cada caballo contra la pista
+C 0x9627 ha llegado alguno a la meta?
+C 0x962E el bit 7 de +0x10 de cada caballo: en el borde
+L 0x9637 camara_borde              Uno
+C 0x963A esta en el borde: la pista va a su velocidad
+C 0x9642 la velocidad de la pista...
+C 0x9646 ...por encima de 0x60...
+C 0x964A ...baja uno cada dos cuadros
+L 0x9652 caballos_contra           Cada caballo: +0x0D lo que se mueve contra la pista (la diferencia entre las dos velocidades, a la mitad) y el bit 0 de +0x0F si va mas lento (o igual)
+C 0x9659 la velocidad de la pista
+L 0x965F caballos_contra_uno       Uno
+C 0x9663 la suya, menos la de la pista
+C 0x9667 mas rapido: el bit 0 a cero
+C 0x9669 mas lento: la diferencia en positivo
+L 0x966B caballos_contra_lento     Va mas lento que la pista (o igual): el bit 0
+L 0x966F caballos_contra_mitad     La mitad
+L 0x967E camara_meta               Con caballos en la meta, la pista se va parando
+L 0x968A camara_lider              Si el caballo del borde corre, la pista toma su velocidad
+C 0x968F corre?
+C 0x9692 fuera la vuelta: la pista...
+C 0x969A ...va a la velocidad de ese caballo
+L 0x96A1 cansancio                 Corriendo, cada caballo gasta su fuerza (0xE03F) segun lo rapido que va
+C 0x96A1 la pista corre?
+C 0x96A7 el caballo 1: la velocidad entre 32...
+C 0x96B1 ...suma su cuenta...
+C 0x96B7 ...y si pasa de 64, un punto menos de fuerza
+L 0x96BE cansancio_2               El caballo 2
+L 0x96D5 cansancio_3               El caballo 3
+L 0x96EC cansancio_4               El caballo 4
+L 0x9703 entre_32                  Los bits 5-6: la velocidad entre 32
+L 0x970B caballos                  Los cuatro caballos: cada uno con su bloque (0xE07F, 32 bytes), sus tres sprites, su calle de salida y su numero
+C 0x970B el 1...
+C 0x970F ...sprites 0x18-0x1A...
+C 0x9713 ...negro (color 1), en la calle de Y 0x48
+C 0x9718 el 2
+C 0x9728 el 3
+C 0x9738 el 4
+L 0x9748 caballo                   Un caballo por su estado (+0): 1 la salida, 2 corre, 3 tropieza, 4 salta, 5 cae, 6 en el suelo, 7 despues de la meta
+C 0x974B por la tabla
+D 0x974E 0x975C estados_caballo  Los siete estados: la salida, corre, tropieza, salta, cae, en el suelo y despues de la meta
+F 0x974E w7
+L 0x975C caballo_sale              Estado 1: el bloque a cero, su calle, X 0xD0 a la derecha, el dibujo 2 y su color; nadie ha llegado y los jinetes montan
+C 0x975C el bloque...
+C 0x975F ...a cero
+C 0x9765 la Y de su calle
+C 0x976B X: 0xD0
+C 0x976F el dibujo 2
+C 0x9773 el color
+C 0x9776 el numero
+C 0x9779 nadie en la meta
+C 0x977C ni el jugador
+C 0x9782 los sprites
+C 0x9785 los cuatro jinetes, al estado 1
+C 0x9794 los numeros de 1ST y 2ND en blanco
+L 0x9798 caballo_corre             Estado 2: correr (paso 1) o prepararse para saltar (paso 2)
+D 0x979E 0x97A2 pasos_corre  Los dos pasos: correr y prepararse para saltar
+F 0x979E w2
+L 0x97A2 corre                     Paso 1: lo que pisa: la meta, las cosas sueltas, la valla o la ria; si no, salta si toca (el jugador con el boton 2, el ordenador si viene un obstaculo)
+C 0x97A2 bit 7: la meta
+C 0x97A9 bit 6: cosas sueltas, tropieza
+C 0x97AD bit 5: la valla o la ria, cae
+C 0x97B1 es el del jugador?...
+C 0x97B8 ...ha pulsado el boton 2?
+L 0x97BF corre_ordenador           El ordenador salta si lo que viene delante (16 pixeles) es un obstaculo (bit 3)
+L 0x97C7 corre_mueve               Se mueve; en los bordes de la pantalla, la marca para la camara
+C 0x97CA X < 0x50: en el borde izquierdo
+C 0x97D2 X >= 0xE8: en el derecho
+C 0x97D7 dentro: sin marcas
+L 0x97E0 caballo_meta              Llega a la meta: uno mas; si es el del jugador, su puesto; el primero cambia la pista y los dos primeros dan la pareja ganadora
+C 0x97E0 ya habia llegado?
+C 0x97E5 la meta parpadea
+C 0x97EA uno mas en la meta
+C 0x97EE es el del jugador?
+C 0x97F4 su puesto
+L 0x97F8 meta_puesto               El puesto: el primero lleva al jinete de la victoria; el jinete pinta los numeros de 1ST y 2ND
+C 0x97FC solo los dos primeros
+C 0x9801 los que han llegado (la suma de sus valores)
+C 0x9804 el primero: 0x986B
+C 0x9808 el tercero o mas: nada
+C 0x980D el segundo: la pareja de los dos...
+C 0x9813 ...por la tabla 0x9865
+C 0x981B el resultado
+C 0x981E llegado
+L 0x9823 meta_numero               El jinete: el numero del caballo en 1ST (fila 3) o 2ND (fila 4)
+C 0x9823 solo el jinete
+C 0x9828 el primero...
+C 0x9833 ...o el segundo
+L 0x9836 meta_numero_pon           El numero: la casilla 0x8A + el caballo
+L 0x983F meta_jinete               El jinete del primero, al estado 4 (la victoria)
+C 0x9840 el primero?
+C 0x9844 su jinete
+C 0x984D estado 4...
+C 0x9850 ...paso 1
+L 0x9852 meta_jinete_fin           Vuelve
+L 0x9854 meta_borra                Los numeros de 1ST y 2ND en blanco (0x90)
+D 0x9865 0x986B parejas  La pareja ganadora por la suma de los dos primeros (0x22, 0x24, 0x26, 0x28, 0x2A, 0x2C): 0x80 + su lugar en las cuotas (1-2, 1-3, 2-3, 1-4, 2-4, 3-4)
+F 0x9865 6
+L 0x986B meta_primero              El primero: suma su valor (0x988F) y todos los caballos pasan al estado 7
+C 0x986B su valor...
+C 0x9875 ...a la cuenta de la meta
+C 0x987B el estado 7...
+C 0x987E ...para los cuatro
+L 0x988A meta_hecho                Llegado
+D 0x988F 0x9893 valores_meta  El valor de cada caballo al llegar: 0x10, 0x12, 0x14 y 0x18 (la suma de dos da la pareja)
+F 0x988F 4
+L 0x9893 a_tropieza                Al estado 3: tropieza
+L 0x989C a_cae                     Al estado 5: cae
+L 0x98A5 borde_izquierdo           La marca del borde izquierdo
+L 0x98AA borde_derecho             La marca del borde derecho
+L 0x98AF a_preparado               Al paso 2: se prepara para saltar
+L 0x98B4 pisa                      Lo que pisa el caballo: la casilla bajo sus patas (X + 12, Y - 8) y la de su izquierda, por la tabla 0x98ED
+C 0x98B7 X + 12
+C 0x98BD Y - 8
+L 0x98C7 pisa_delante              Lo que tiene delante: Y - 16, por la tabla 0x9904
+L 0x98DA pisa_cae                  Donde cae del salto: Y - 18, por la tabla 0x991B
+D 0x98ED 0x9931 pisa_tablas  Lo que es cada casilla para las patas, delante y al caer del salto: bit 7 la meta, 6 cosas sueltas, 5 la valla o la ria, 4 lo mismo al caer, 3 un obstaculo delante
+F 0x98ED 23
+L 0x9931 pisa_dos                  Las dos casillas (la de la columna y la de dos mas a la izquierda), sus bits juntos
+L 0x9942 pisa_casilla              La casilla de la pantalla en (L, H) y su lugar en la tabla: 0x13-0x1E o desde 0xD6
+C 0x9945 0x13-0x1E: 0-11
+C 0x994A desde 0xD6: 12 en adelante
+L 0x994D pisa_tabla                El byte A de la tabla DE
+L 0x9955 pantalla_lee              RDVRM de la casilla de la pantalla en (Y = L, X = H)
+C 0x9957 X / 8
+C 0x9961 Y / 8 x 32
+C 0x9968 la tabla de nombres
+L 0x9972 caballo_mueve             El caballo se mueve: su calle, su X contra la pista y el galope
+C 0x9972 la calle
+C 0x9978 lo que se mueve contra la pista (+0x0D)...
+C 0x997C ...suma la cuenta
+C 0x9983 la X (16 bits)
+C 0x9989 mas lento que la pista?
+C 0x9990 en el borde derecho, no pasa
+C 0x9997 atras: a la derecha
+L 0x999B caballo_adelanta          Mas rapido: a la izquierda (adelante); en la salida no pasa de X 0x50
+C 0x999B ha llegado alguno?
+C 0x99A1 en la salida...
+C 0x99A2 ...no pasa de 0x50
+L 0x99A6 caballo_izquierda         Uno a la izquierda
+L 0x99A7 caballo_x                 La X nueva
+L 0x99AD caballo_galope            El galope, mas deprisa cuanto mas corre (0x9A20)
+C 0x99AD su velocidad...
+C 0x99B7 ...a la mitad
+L 0x99C4 calle                     Cada cuatro cuadros, la calle: arriba o abajo un pixel, hasta 4 de su sitio; si no, vuelve
+C 0x99C4 un cuadro de cada cuatro
+C 0x99CC lo que se ha movido de su calle
+C 0x99D0 cambia de calle?
+C 0x99D6 abajo...
+C 0x99DA ...o arriba
+L 0x99DC calle_limite              No mas de 4
+L 0x99E3 calle_dentro              Pasa de 4: se queda
+L 0x99E8 calle_y                   La Y: la de su calle mas lo movido
+L 0x99F3 calle_vuelve              Sin palanca, vuelve a su calle
+L 0x99FE calle_baja                Uno menos
+L 0x9A01 animacion                 La animacion del caballo: cuando la cuenta (+0x09) pasa de 64, el dibujo siguiente de la serie DE (umbrales y dibujos, 0x80BB)
+C 0x9A04 la cuenta
+C 0x9A0D el paso de la animacion
+C 0x9A15 la serie
+C 0x9A16 el dibujo que toca
+D 0x9A20 0x9A40 animaciones  Las cuatro series de dibujos del caballo: cuatro umbrales y cuatro dibujos (galope, salto, caida y en el suelo)
+F 0x9A20 8
+L 0x9A40 caballo_sprites           Los tres sprites del caballo: el color, el dibujo (0xB3DB, 9 bytes: dibujo, Y y X de cada sprite) y su sitio en la pantalla; si sale por los bordes, el bit 7 del color corre la X 32 pixeles
+C 0x9A40 el color en los tres
+C 0x9A4C el dibujo x 9
+C 0x9A57 la tabla
+C 0x9A5B dibujo, Y y X del primero...
+C 0x9A6A ...del segundo...
+C 0x9A79 ...y del tercero
+C 0x9A87 mas la calle en las tres Y
+C 0x9A9B la X del caballo (16 bits)...
+C 0x9AA1 ...mas la de cada sprite
+C 0x9AA8 fuera de la pantalla?
+C 0x9AB0 fuera: Y = 0xC2
+L 0x9AB3 sprites_x2                Por la izquierda: la X + 32 y el bit 7 del color
+L 0x9ABB sprites_seg               El segundo sprite
+L 0x9ACD sprites_x3                ...
+L 0x9AD5 sprites_ter               El tercero
+L 0x9AE8 sprites_x4                ...
+L 0x9AF0 sprite_x                  La X del sprite: DE + L (con signo); si no cae en la pantalla, NC y A = 0xC2 (fuera)
+C 0x9AF3 L con signo
+C 0x9AF9 la suma
+C 0x9AFA dentro de 0-255?
+C 0x9AFE por la izquierda, hasta -16...
+C 0x9B00 ...si no, fuera
+C 0x9B03 la X + 32...
+C 0x9B06 ...y el bit 7 del color
+L 0x9B0A preparado                 Paso 2 del estado 2: el galope hasta el final del paso y a saltar (estado 4)
+C 0x9B10 el final del paso?
+C 0x9B18 la cuenta de la animacion a 0
+C 0x9B1D estado 4, paso 1: salta
+L 0x9B26 caballo_tropieza          Estado 3: tropieza con algo suelto (o vuelve del suelo)
+D 0x9B2C 0x9B30 pasos_tropieza  Los dos pasos: el golpe y el frenazo
+F 0x9B2C w2
+L 0x9B30 tropieza                  Paso 1: el sonido (si es el jugador o se apuesta), 24 cuadros y al paso 2
+C 0x9B30 la apuesta: suena
+C 0x9B36 el jinete: solo el suyo
+L 0x9B3C tropieza_suena            El sonido del golpe (bit 5 de 0xE147)
+L 0x9B41 tropieza_cuenta           24 cuadros
+L 0x9B4A frenazo                   Paso 2: frenado 24 cuadros; luego, si pisa la valla o la ria cae, si pisa algo suelto se queda; si no, corre; el jugador puede saltar
+C 0x9B4A el jugador...
+C 0x9B51 ...pulsa el boton 2?
+L 0x9B55 frenazo_cuenta            Un cuadro menos: mientras, mas lento que la pista
+C 0x9B5A mas lento...
+C 0x9B5E ...a 16
+L 0x9B65 frenazo_fin               Se acaba: lo que pisa
+C 0x9B6B la valla o la ria?
+C 0x9B6F nada?
+C 0x9B72 a correr
+L 0x9B7B frenazo_quieto            Sigue sobre algo suelto: quieto con la pista
+L 0x9B86 frenazo_salta             Al paso 2 del estado 2: a saltar
+L 0x9B8F frenazo_cae               Al estado 5: cae
+L 0x9B98 caballo_salta             Estado 4: el salto (paso 1 sube, 2 en el aire, 3 baja)
+D 0x9BA0 0x9BA6 pasos_salto  Los tres pasos del salto
+F 0x9BA0 w3
+L 0x9BA6 salto_sube                Paso 1: la animacion del salto hasta el dibujo 15, el sonido y 24 cuadros en el aire
+C 0x9BAC el paso de la animacion...
+C 0x9BB1 ...el 15?
+C 0x9BB4 el sonido
+C 0x9BB7 24 cuadros...
+C 0x9BBC ...en el paso 2
+L 0x9BC1 salto_suena               El sonido del salto (0xBEA1, canal 2) si el canal esta libre
+L 0x9BCF salto_aire                Paso 2: en el aire
+L 0x9BD8 salto_baja                Paso 3: hasta el final de la animacion; donde cae: sobre algo suelto tropieza, en la valla o la ria va al suelo; si no, corre
+C 0x9BDE el final?
+C 0x9BE6 donde cae
+C 0x9BE9 algo suelto?
+C 0x9BEE la valla o la ria?
+C 0x9BF3 bien: a correr
+L 0x9BFC salto_tropieza            Al estado 3: tropieza
+L 0x9C05 salto_suelo               Al estado 6: al suelo
+L 0x9C12 caballo_cae               Estado 5: cae (la animacion de la caida y el jinete sale despedido)
+D 0x9C18 0x9C1C pasos_cae  Los dos pasos de la caida
+F 0x9C18 w2
+L 0x9C1C cae_galope                Paso 1: acaba el paso de galope
+L 0x9C33 cae_caida                 Paso 2: la caida (0x9A30); en el dibujo 4 sale el jinete; al final, en el suelo
+C 0x9C3E el dibujo 4?
+C 0x9C43 el final?
+C 0x9C46 al estado 6, paso 2
+L 0x9C4F caballo_suelo             Estado 6: en el suelo, se queda atras con la pista hasta salir por la derecha
+D 0x9C55 0x9C59 pasos_suelo  Los dos pasos: caer y quedarse atras
+F 0x9C55 w2
+L 0x9C59 suelo_cae                 Paso 1: la animacion (0x9A38); en el dibujo 4, el jinete sale despedido
+L 0x9C73 jinete_despedido          El sonido de la caida (bit 7 de 0xE147) y el jinete de este caballo al estado 3
+C 0x9C78 el jinete...
+C 0x9C81 ...estado 3, paso 1
+L 0x9C87 suelo_atras               Paso 2: con la pista corriendo, a la derecha a su velocidad; al salir (X >= 0xD8), vuelve a la carrera con el jinete
+C 0x9C87 la pista corre?
+C 0x9C8D la mitad de su velocidad...
+C 0x9C9D ...en la cuenta
+L 0x9CA2 suelo_derecha             Un pixel a la derecha
+C 0x9CA8 ha salido?
+C 0x9CAC su jinete...
+C 0x9CB5 ...a montar otra vez
+C 0x9CBA 16 cuadros...
+C 0x9CBE ...frenado (estado 3, paso 2)
+L 0x9CC7 suelo_sprites             Los sprites
+D 0x9CCB 0x9CD3 jinetes_tabla  Los bloques de los cuatro jinetes (0xE0FF, 8 bytes cada uno)
+F 0x9CCB w4
+L 0x9CD3 caballo_tras_meta         Estado 7: despues del primero en la meta: corre hasta salir por la izquierda y se para
+C 0x9CD6 la meta?
+C 0x9CDB fuera por la izquierda?
+L 0x9CEB tras_meta_corre           Corre
+L 0x9CEF tras_meta_para            Parado: estado 0
+# ======================================================================
+# LOS JINETES
+# ======================================================================
+L 0x9CF4 jinetes                   Los cuatro jinetes: un bloque de 8 bytes (0xE0FF) y un sprite cada uno, sobre su caballo
+C 0x9CF4 el 1...
+C 0x9CF8 ...sprite 0x02...
+C 0x9CFC ...sobre el caballo 1
+C 0x9D04 el 2
+C 0x9D14 el 3
+C 0x9D24 el 4
+L 0x9D31 jinete                    Un jinete por su estado: 1 monta, 2 cabalga, 3 sale despedido, 4 la victoria
+D 0x9D37 0x9D3F estados_jinete  Los cuatro estados del jinete
+F 0x9D37 w4
+L 0x9D3F jinete_monta              Estado 1: el bloque a cero, blanco, su numero y a cabalgar
+C 0x9D49 blanco
+C 0x9D4D el numero
+L 0x9D5C jinete_dibujo             El dibujo del jinete (0x9D99: dibujo, Y y X por numero y postura) sobre su caballo
+C 0x9D5F la postura...
+C 0x9D62 ...x 4 + el numero...
+C 0x9D66 ...x 3
+L 0x9D6F jinete_sprite             El sprite: dibujo, Y del caballo + dy, X del caballo + dx
+C 0x9D75 la Y del caballo...
+C 0x9D7B la X...
+C 0x9D82 fuera?
+D 0x9D99 0x9DB1 jinetes_dibujos  Los dibujos del jinete: los cuatro numeros sentado y los cuatro con el latigo (dibujo, dy, dx)
+F 0x9D99 3
+L 0x9DB1 jinete_cabalga            Estado 2: sentado, o el latigo si lo usa (con el caballo en los estados 2, 3, 6 o 7); sube y baja con el galope (0x9E35)
+C 0x9DB2 sentado
+C 0x9DB6 su caballo
+C 0x9DBC el estado del caballo...
+C 0x9DC9 ...2, 3, 6 o 7: el latigo
+L 0x9DCC jinete_galope             La Y segun el dibujo del caballo
+D 0x9DE5 0x9DED caballos_tabla  Los bloques de los cuatro caballos
+F 0x9DE5 w4
+L 0x9DED tabla_palabra             HL = la palabra C de la tabla HL
+L 0x9DF8 latigo                    El latigo: si su caballo lo lleva (bit 5 de 0xE13F), 16 cuadros arriba y abajo; en el modo A, solo el jinete del jugador
+C 0x9E01 el jinete: solo el del jugador
+L 0x9E0A latigo_cuenta             Empieza a contar?...
+C 0x9E10 ...si el caballo usa el latigo...
+C 0x9E15 ...con su sonido
+L 0x9E1B latigo_sube               La cuenta, hasta 16
+L 0x9E28 latigo_postura            Ocho cuadros con el latigo, ocho sin el
+L 0x9E31 latigo_pon                La postura
+D 0x9E35 0x9E3F galope_y  La Y del jinete con cada dibujo del caballo
+F 0x9E35 10
+L 0x9E3F jinete_cae                Estado 3: sale despedido
+D 0x9E45 0x9E49 pasos_jinete_cae  Los dos pasos: empieza y vuela
+F 0x9E45 w2
+L 0x9E49 jinete_cae_empieza        Paso 1: desde el principio de la trayectoria
+L 0x9E56 jinete_vuela              Paso 2: la trayectoria (0x9E7F: dibujo, dy, dx), un punto mas cada vez que la cuenta pasa de 64, hasta el 7
+L 0x9E6E jinete_vuela_pon          El punto x 3
+D 0x9E7F 0x9E97 jinete_trayectoria  Los ocho puntos del jinete despedido: dibujo, dy, dx
+F 0x9E7F 3
+L 0x9E97 jinete_victoria           Estado 4: el jinete del primero levanta el brazo, ocho cuadros si y ocho no (0x9EA7 y 0x9EAA)
+L 0x9EA4 jinete_victoria_pon       El dibujo
+D 0x9EA7 0x9EAD jinete_brazo  Las dos posturas de la victoria (dibujo, dy, dx)
+F 0x9EA7 3
+# ======================================================================
+# LA META Y LOS SONIDOS
+# ======================================================================
+L 0x9EAD meta_luz                  Cada vez que llega un caballo, la luz de lo alto de la meta (las tres ultimas lineas de la casilla 0x1F) se pone blanca 8 cuadros y vuelve al azul
+C 0x9EB0 ya parpadea?
+C 0x9EB4 ha llegado alguno?
+L 0x9EC1 meta_cuenta               Un cuadro mas: hasta 16
+L 0x9ED1 meta_para                 Se acaba
+L 0x9ED6 meta_color1               El color 0x1F (blanco) en las lineas 5-7 de la casilla 0x1F del primer tercio...
+L 0x9ED8 meta_color                ...FILVRM
+L 0x9EE2 meta_color2               ...o 0x14 (azul)
+D 0x9EE6 0x9EE7 ret_suelto  Un "ret" al que no se llega: 0x9EE2 salta a 0x9ED8, que vuelve por su cuenta
+L 0x9EE7 sonidos                   Los sonidos de la carrera en el canal 1, si esta libre: la caida (bit 7 de 0xE147), el latigo (6) o el golpe (5)
+C 0x9EED el canal 1 suena?
+C 0x9EF2 lo que ha pasado
+C 0x9EF6 bit 7: la caida
+C 0x9EF9 bit 6: el latigo
+C 0x9EFC bit 5: el golpe
+C 0x9EFE (0xBF76)
+L 0x9F05 sonido_caida              La caida (0xBE33)
+L 0x9F0C sonido_latigo             El latigo (0xBEC9)
+L 0x9F11 sonido_pon                En el canal 1
+L 0x9F17 marca_puesto              El jinete: si su caballo llega primero o segundo, el sprite 0 parpadea junto a 1ST o 2ND
+C 0x9F17 solo el jinete
+C 0x9F1C ha llegado?
+C 0x9F22 primero o segundo...
+C 0x9F25 ...la X, el dibujo y el color
+C 0x9F30 parpadea cada 16 cuadros
+L 0x9F37 marca_puesto_fuera        Fuera
+L 0x9F38 marca_puesto_y            La Y de la tabla en el sprite 0
+D 0x9F44 0x9F4A marca_puesto_tabla  El sprite de la marca (X 0x38, dibujo 0xAC, gris) y las tres Y: fuera (0xC2), en la fila de 1ST y en la de 2ND
+F 0x9F44 3
+# ======================================================================
+# LAS FUERZAS DE LOS CABALLOS
+# ======================================================================
+# Cada caballo tiene cuatro bytes en 0xE03F: su fuerza (16 bits, se gasta al
+# correr, 0x96A1) y en 0xE041 su paso (bits 2-4: la velocidad de 0x961F; bit 5
+# el latigo; bits 6-7 al azar). Al empezar la carrera, 0xA97E echa 16 numeros
+# al azar de 0 a 15 y 0xA01C hace la fuerza con la distancia; con ellas salen
+# las cuotas (0xA1B9). En 0xF080 hay 8 bytes por caballo para las cuentas.
+L 0x9F4A fuerzas                   Cada paso de la pista: la fuerza de cada caballo se reparte con lo que le queda por correr, y el ordenador elige el paso de los suyos
+C 0x9F4A el paso de la pista...
+C 0x9F4E ...es otro?
+C 0x9F59 las fuerzas
+C 0x9F5D cuatro caballos
+C 0x9F5F las cuentas de cada uno (8 bytes)
+L 0x9F62 fuerzas_uno               Un caballo: su cuenta menos la fuerza (sin bajar de 0)...
+C 0x9F6C ...la mitad, redondeada hacia arriba...
+C 0x9F75 ...se le quita a la fuerza (sin bajar de 0)
+L 0x9F86 fuerzas_resta             La fuerza nueva
+C 0x9F89 la mitad, mas la cuenta
+C 0x9F91 a la cuenta, sin bajar de 0
+C 0x9F94 las tres palabras siguientes: alguna no es 0?
+L 0x9FA3 fuerzas_cuenta            Se vuelve a guardar
+L 0x9FAD fuerzas_sig               El caballo siguiente
+C 0x9FB3 la cuenta de la carrera (0xF0A0)...
+C 0x9FBB ...y las de los caballos: cual llega antes a 0 (BC)
+L 0x9FC7 fuerzas_paso              Lo que queda (0xF0CE) y el paso de cada caballo del ordenador
+C 0x9FD2 el paso de los cuatro
+C 0x9FD8 el del jugador no
+L 0x9FDD fuerzas_paso_uno          Uno: su cuenta x 8 entre lo que queda; 4 menos eso, de 0 a 7, es el paso (bits 2-4)
+C 0x9FED lo que queda...
+C 0x9FF1 ...es 0?: el paso 7 (0x1C)
+C 0x9FF7 la division
+C 0xA001 4 - el cociente...
+C 0xA003 ...de 0 a 7...
+C 0xA005 ...en los bits 2-4
+L 0xA007 fuerzas_paso_pon          El paso en su byte
+L 0xA014 fuerzas_paso_sig          El caballo siguiente
+L 0xA01C fuerzas_empieza           Al empezar la carrera: la fuerza de cada caballo es la de la distancia (0xA105) mas sus dos numeros al azar (el segundo con signo, bit 3)
+C 0xA01C la carrera...
+C 0xA026 ...su distancia
+C 0xA02E la fuerza de la distancia
+C 0xA034 los cuatro caballos
+L 0xA039 fuerzas_empieza_uno       Uno: el primer numero...
+C 0xA03D ...el segundo: bit 3 el signo
+C 0xA049 negativo
+L 0xA04D fuerzas_empieza_suma      La suma, mas la de la distancia...
+C 0xA052 ...es la fuerza
+C 0xA055 de los dos bytes de despues, solo los bits 0-1
+C 0xA060 los pasos de la carrera (0xA0FB)...
+C 0xA06A ...en 0xF0A0
+C 0xA06D la fuerza de cada uno, a sus cuentas
+L 0xA076 fuerzas_copia             Una
+C 0xA085 los tercios
+C 0xA08B y las cuentas segun los bits 0-1 de cada caballo
+L 0xA094 fuerzas_estilo            Uno: 3 no cambia; si no, se pasa un octavo de una cuenta a otra
+C 0xA096 3?
+C 0xA09D un octavo...
+L 0xA0A2 fuerzas_octavo            ...entre 8
+C 0xA0A9 es 0?
+C 0xA0AB 1 o 2: de que cuenta a cual
+L 0xA0B0 fuerzas_quita             Se quita de una y se suma a la otra
+L 0xA0B8 fuerzas_quita2            Al reves
+L 0xA0BE fuerzas_estilo_sig        El siguiente
+L 0xA0C6 tercios_carrera           La cuenta de la carrera (0xF0A0) partida en tres
+L 0xA0CD tercios_caballos          Las de los cuatro caballos
+L 0xA0D2 tercios_uno               Una: un tercio, otro tercio y lo que sobra
+C 0xA0D9 entre 3
+C 0xA0E3 el tercio dos veces
+C 0xA0ED lo que sobra: el total menos dos tercios
+D 0xA0FB 0xA10F distancias  Los pasos de pista de cada distancia (48, 64, 96, 128 y 144: de 25 m en 25 m) y la fuerza de los caballos para cada una (127, 169, 254, 339 y 382)
+F 0xA0FB w5
+L 0xA10F palabra_suma              (HL) += DE
+L 0xA118 palabra_guarda            Lo guarda
+L 0xA11F palabra_resta             (HL) -= DE
+L 0xA12C palabra_cero              Z si la palabra (HL) es 0; si lo es, HL pasa a la siguiente
+L 0xA135 palabra_baja              Una palabra menos: si llega a 0, BC + 2 (cuenta cual)
+L 0xA145 palabra_baja_cero         Ya era 0
+L 0xA147 palabra_baja_bc           BC + 2
+L 0xA14A tabla_w                   DE = la palabra HL de la tabla DE
+L 0xA150 cuenta_caballo            HL = 0xF080 + B x 8: las cuentas del caballo B. Nadie la llama
+C 0xA150 las cuentas...
+C 0xA153 ...B x 8
+L 0xA15B palabra_lee               DE = la palabra (HL), sin mover HL
+L 0xA160 palabra_menos             DE = (HL) - DE, sin bajar de 0
+L 0xA16F palabra_menos_fin         ...
+L 0xA172 palabra_menos_pon         (HL) = (HL) - DE, sin bajar de 0
+L 0xA175 palabra_pon               (HL) = DE y HL + 2
+L 0xA17A palabra_menos_antes       La palabra anterior a 0 y la resta en esta
+L 0xA184 divide                    HL = HL / DE (16 bits): el divisor se corre a la izquierda y se resta bit a bit
+C 0xA184 cuantos bits se corre
+L 0xA187 divide_corre              El divisor a la izquierda hasta que se sale un bit
+C 0xA18B 16 veces sin salir: es 0
+L 0xA192 divide_resta              El bit que se ha salido, de vuelta
+C 0xA198 el cociente, en HL'
+L 0xA19C divide_bit                Cabe?...
+C 0xA1A3 ...si: se resta y el cociente uno mas
+L 0xA1AA divide_baja               No cabe: el siguiente bit
+C 0xA1AF el cociente x 2
+C 0xA1B1 el divisor a la derecha
+L 0xA1B7 divide_fin                El cociente en HL
+# ======================================================================
+# LAS CUOTAS
+# ======================================================================
+L 0xA1B9 cuotas                    Las cuotas de las seis parejas: cuanto mas fuertes los dos caballos, menos pagan (de 2 a 99)
+C 0xA1B9 hay que hacerlas?
+C 0xA1C1 la fuerza mas baja de los cuatro...
+L 0xA1CB cuotas_min                ...
+L 0xA1D1 cuotas_min_sig            ...
+C 0xA1D3 ...y la mas alta
+L 0xA1DB cuotas_max                ...
+L 0xA1E1 cuotas_max_sig            ...
+C 0xA1E3 la diferencia, menos 10...
+C 0xA1E8 ...si no llega, 0x1F...
+C 0xA1EC ...si no, de la tabla 0xA2EF
+L 0xA1F3 cuotas_factor             El factor (0xF0C7)
+C 0xA1F7 lo de cada pareja, en 0xF0B7...
+C 0xA1FA ...y la suma en BC
+C 0xA1FD 1-2
+C 0xA207 1-3
+C 0xA211 1-4
+C 0xA21B 2-3
+C 0xA225 2-4
+C 0xA22F 3-4
+C 0xA239 la suma de las seis
+C 0xA243 seis cuotas
+L 0xA245 cuota_calcula             Una: la suma x el factor entre lo de la pareja
+C 0xA24A el factor...
+C 0xA24D ...por lo de la pareja
+C 0xA256 entre la suma, restando
+L 0xA25F cuotas_resta              Una resta mas
+L 0xA26E cuotas_cociente           El cociente
+C 0xA272 al menos 2
+L 0xA278 cuotas_pon                La cuota
+C 0xA27D las seis a BCD
+L 0xA282 cuotas_bcd                Una: las decenas...
+L 0xA285 cuotas_bcd_10             ...de 10 en 10
+L 0xA28C cuotas_bcd_pon            Las decenas arriba, las unidades abajo
+L 0xA295 cuotas_bcd_100            Lo que pasa de 100...
+L 0xA29C cuotas_bcd_99             ...no mas de 99
+L 0xA2AD cuotas_bcd_sig            La siguiente
+C 0xA2B1 las seis cuotas, al marcador (0xE011)
+L 0xA2BD multiplica                HL = DE x A (8 bits); lo que pasa de 16 bits, en 0xF0B6
+L 0xA2C7 multiplica_bit            Un bit de A
+L 0xA2D4 multiplica_sig            El siguiente
+L 0xA2D9 cuotas_pareja             Lo de una pareja: 31 - (las fuerzas bajas de los dos) por el factor, a (DE), y la suma en BC
+C 0xA2DB las dos fuerzas...
+C 0xA2DC ...contra 31
+D 0xA2EF 0xA2F5 cuotas_factores  El factor de las cuotas segun lo que separa al mas fuerte del mas flojo
+F 0xA2EF 6
+# ======================================================================
+# EL PAGO (en el bucle principal)
+# ======================================================================
+L 0xA2F5 pago                      El pago, fuera de la interrupcion: a cada jugador, por cada punto apostado a la pareja ganadora, la cuota; uno cada dos cuadros, contando en el marcador
+C 0xA2F5 el pago (0xF0D0): bit 0 empieza, bit 7 acabado
+C 0xA2FF bits 2 y 3: la pareja parpadea y la cuenta va
+C 0xA302 cuatro jugadores
+C 0xA305 su dinero (0xE02F)
+C 0xA309 sus apuestas (0xE017)
+C 0xA30D las cuotas
+C 0xA310 la pareja ganadora
+L 0xA318 pago_jugador              Un jugador: lo que ha apostado a la pareja
+C 0xA31D nada
+C 0xA320 alguien cobra (bit 1)
+L 0xA328 pago_punto                Un punto
+L 0xA329 pago_espera               Espera a que la interrupcion de paso (0xF0E9, cada dos cuadros)
+C 0xA32F el dinero mas la cuota (BCD)...
+C 0xA337 ...con el acarreo
+C 0xA341 que jugador es...
+C 0xA351 ...su sitio en el marcador
+C 0xA359 el dinero, en la pantalla
+C 0xA360 espera otra vez
+C 0xA366 un punto menos (BCD)
+L 0xA36D pago_sig                  El jugador siguiente
+C 0xA37A el premio del jinete
+C 0xA37D el pago, acabado
+L 0xA383 apuesta_mandos            La apuesta: el cursor (dos sprites) por las 24 casillas de las apuestas; el boton 1 cambia entre mover y apostar; el boton 2 acaba
+C 0xA383 la espera entre movimientos...
+C 0xA38A ...un cuadro menos
+L 0xA38B apuesta_mandos_va         Se apuesta (bit 7 de 0xF0C9)?
+C 0xA391 el boton 2?
+L 0xA397 apuesta_acaba             Se acaba: el cursor fuera
+L 0xA3A2 apuesta_jinete            El jinete (bit 4) no apuesta
+C 0xA3A6 el boton 1...
+C 0xA3AC ...cambia entre mover y apostar (bit 3)
+L 0xA3B0 apuesta_modo              Apostar o mover
+C 0xA3B9 el cursor parpadea cada 12 cuadros
+C 0xA3D1 la palanca, la misma que antes...
+C 0xA3DB ...arriba o abajo?
+L 0xA3DF apuesta_suelta            Suelta: sin repeticion
+L 0xA3E4 apuesta_repite            Pulsada: la primera vez...
+C 0xA3E8 ...56 cuadros hasta la repeticion
+L 0xA3EF apuesta_espera            La espera...
+L 0xA3F6 apuesta_rapido            ...luego, una cada 8 cuadros
+L 0xA400 apuesta_punto             Un punto: el jugador de la fila del cursor; abajo quita uno de la apuesta y lo devuelve; arriba apuesta uno (no mas de tres parejas ni de 99)
+C 0xA400 la fila del cursor...
+C 0xA405 ...el jugador
+C 0xA40D su dinero
+C 0xA40E abajo?
+C 0xA416 sus seis apuestas
+C 0xA427 cuantas tiene...
+C 0xA433 ...tres ya?
+C 0xA438 solo puede subir una de las tres
+L 0xA42B apuesta_cuenta            Una
+L 0xA430 apuesta_cuenta_sig        La siguiente
+L 0xA447 apuesta_menos3            Menos de tres
+L 0xA449 apuesta_sube              Le queda dinero?
+L 0xA454 apuesta_sube_va           99 ya?
+C 0xA45C el dinero, uno menos (BCD, tres bytes)
+C 0xA46D la apuesta, uno mas
+L 0xA474 apuesta_baja              Abajo: si hay apuesta, el dinero uno mas y la apuesta uno menos
+C 0xA47B el dinero, uno mas
+C 0xA48C la apuesta, uno menos
+L 0xA491 apuesta_pon               La apuesta, el dinero y las apuestas en la pantalla
+L 0xA49A apuesta_mueve             Mover: el cursor en rojo; la palanca lo mueve una casilla cada 24 cuadros
+C 0xA49A rojo
+C 0xA4A2 la misma palanca que antes?
+C 0xA4AF espera?
+C 0xA4B4 la casilla
+C 0xA4B7 derecha?
+C 0xA4BB abajo?
+C 0xA4BF arriba?
+C 0xA4C3 izquierda: no en la primera columna
+L 0xA4D3 apuesta_casilla           La casilla nueva y sus dos sprites (0xA541: X e Y)
+C 0xA4DE la X...
+C 0xA4E1 ...y 24 mas
+C 0xA4E7 la Y
+C 0xA4F1 24 cuadros de espera
+L 0xA4F7 apuesta_derecha           Derecha: no en la ultima columna
+L 0xA50A apuesta_arriba            Arriba: no en la primera fila
+L 0xA512 apuesta_abajo             Abajo: no mas alla de las filas de los que juegan (0xA532)
+C 0xA51B cuantos juegan
+L 0xA526 apuesta_abajo_va          La fila de abajo
+D 0xA532 0xA536 apuesta_filas  El final de las casillas de 1, 2, 3 y 4 jugadores
+F 0xA532 4
+L 0xA536 apuesta_lee               La apuesta de la casilla del cursor
+D 0xA541 0xA571 apuesta_cursor  Las 24 casillas de las apuestas: X e Y del cursor (seis columnas, cuatro filas)
+F 0xA541 2
+L 0xA571 carrera_ordenador         Cada cuatro pasos de pista, el ordenador cambia al azar los bits 6-7 y el latigo (uno de cada cuatro) de sus caballos; despues, el caballo del jugador y la barra MIN-MAX
+C 0xA571 el paso de la pista...
+C 0xA578 ...es otro...
+C 0xA57B ...y multiplo de 4?
+C 0xA582 cuatro caballos
+C 0xA584 el del jugador no
+L 0xA589 ordenador_uno             Uno: los bits 6-7 al azar
+C 0xA598 el latigo: uno de cada cuatro
+L 0xA5A2 ordenador_latigo          ...
+L 0xA5A9 ordenador_sig             El siguiente
+L 0xA5AF jugador_y_barra           El caballo del jugador, la barra
+C 0xA5B5 el jinete?
+C 0xA5BA en el pago no
+C 0xA5BF lo que le queda de fuerza (0-63)
+C 0xA5C5 nada: la barra vacia (0xA639)
+L 0xA5D1 barra                     La barra MIN-MAX: los cuatro sprites (0xA5F9) segun los bits 4-5 y la X del ultimo segun los bits 0-3
+C 0xA5E1 los bits 0-3...
+C 0xA5E8 menos de 8: el sprite del final cambia de dibujo
+L 0xA5EE barra_x                   La X del final
+D 0xA5F9 0xA659 barra_sprites  La barra MIN-MAX: cuatro grupos de cuatro sprites por lo que queda de fuerza, la barra vacia y los cuatro sprites fuera
+F 0xA5F9 4
+L 0xA659 dinero_pinta              El dinero de los cuatro jugadores en el marcador de abajo (1UP-4UP)
+C 0xA659 sus sitios en la pantalla
+C 0xA65D el dinero
+L 0xA663 dinero_uno                Uno
+L 0xA674 dinero_pon                El dinero de (IY): dos bytes BCD, cuatro cifras; los ceros de la izquierda en blanco; y un 0 detras
+C 0xA676 el byte alto
+C 0xA679 aun no ha salido una cifra
+L 0xA686 dinero_byte               Un byte: las dos cifras
+C 0xA68C el byte bajo
+C 0xA691 todo ceros: el ultimo en blanco...
+L 0xA699 dinero_cero               ...y el 0 de detras
+L 0xA6A3 dinero_alta               La cifra alta: un 0 a la izquierda, en blanco (0xDF)
+L 0xA6B1 dinero_cifra              La cifra: casilla 0x60 + n
+L 0xA6B9 dinero_cifra_pon          A la pantalla
+L 0xA6C0 dinero_baja               La cifra baja
+L 0xA6CE dinero_baja_pon           ...
+D 0xA6D4 0xA6E3 dinero_tabla  Las mascaras de las dos cifras y el aviso de ceros; cuatro bytes que nadie lee por su direccion; y los sitios del dinero de 1UP, 2UP, 3UP y 4UP en la pantalla
+F 0xA6D4 3,4,w4
+L 0xA6E3 plano                     El plano del ovalo, arriba a la derecha: un punto (sprite) por caballo segun donde va en la pista
+C 0xA6E3 no en el pago
+C 0xA6E9 la vuelta de cada caballo
+C 0xA6ED su X en la pantalla
+C 0xA6F2 el paso de la pista, de 0 a 0x5F
+L 0xA6FD plano_vuelta              0x60 - el paso
+L 0xA702 plano_uno                 Un caballo: la X entre 32, contra el paso
+L 0xA713 plano_mod                 De 0 a 0x5F
+L 0xA719 plano_pon                 Con el bit 7
+C 0xA726 los cuatro puntos
+L 0xA731 plano_punto               Un punto: en la recta de abajo, la curva, la recta de arriba o la otra curva
+C 0xA73A la recta de abajo
+C 0xA73E la primera curva
+C 0xA742 la recta de arriba
+C 0xA746 la segunda curva
+L 0xA74A plano_recta               Una recta: la X de 0xD7 hacia atras y la Y de la tabla 0xA7BC
+L 0xA752 plano_recta_x             ...
+L 0xA75D plano_y                   La Y del caballo
+L 0xA767 plano_dibujo              El dibujo 8, negro
+L 0xA76F plano_sig                 El siguiente
+L 0xA780 plano_arriba              La recta de arriba: la X desde 0xC8 y la Y de la tabla 0xA7C0
+L 0xA78C plano_curva1              La primera curva: X e Y de la tabla 0xA7C4
+L 0xA78E plano_curva               ...
+L 0xA799 plano_curva2              La segunda curva
+L 0xA79D plano_fuera               Sin carrera: fuera
+L 0xA7A7 plano_tabla               X e Y de la curva: la tabla del caballo y el punto
+L 0xA7B4 tabla_w2                  DE = la palabra A de la tabla DE
+D 0xA7BC 0xA8CC plano_tablas  El plano: la Y de cada caballo en la recta de abajo y en la de arriba, y las tablas de las curvas (Y, X) de cada caballo
+F 0xA7BC 4,4,w4,16
+# ======================================================================
+# LA CARRERA NUEVA Y EL JINETE DEL JUGADOR
+# ======================================================================
+L 0xA8CC carrera_prepara           La carrera nueva: las fuerzas al azar, las cuotas, las cuentas, las apuestas a cero, el marcador y el cursor de la apuesta
+C 0xA8CC el sprite del plano, fuera
+C 0xA8D1 16 numeros al azar
+C 0xA8D4 las cuotas
+C 0xA8D7 la distancia de la carrera
+C 0xA8E6 las fuerzas
+C 0xA8EA el ultimo paso visto
+C 0xA8F4 las cuotas, hechas
+C 0xA8F9 las 24 apuestas a cero
+C 0xA903 las apuestas, el dinero y las cuotas en la pantalla
+C 0xA90C el modo (la demostracion como un jugador)
+L 0xA915 carrera_prepara_modo      Los bits de la apuesta por el modo (0xA979): 7 se apuesta, 4 el jinete, 5-6 cuantos juegan
+C 0xA91F el parpadeo del cursor
+C 0xA924 el pago a cero
+L 0xA92A carrera_prepara_borra     ...
+C 0xA92E el latigo y sus cuentas a cero
+C 0xA93B la barra MIN-MAX, fuera
+C 0xA946 la fuerza entera
+C 0xA94B el jinete: sin cursor
+C 0xA951 la apuesta: el cursor en la primera casilla
+D 0xA96C 0xA97E carrera_tablas  El ultimo paso visto al empezar (por la distancia), los dos sprites del cursor y los bits de la apuesta por modo
+F 0xA96C 5,4,4,5
+L 0xA97E azar16                    Los 16 numeros al azar (0-15) de 0xE03F
+L 0xA983 azar16_uno                ...
+L 0xA985 azar16_pon                ...
+L 0xA992 ganadora_parpadea         En el pago, la pareja ganadora parpadea (un sprite sobre su cuota); si no, fuera
+C 0xA997 parpadea?
+C 0xA99B no: los cuatro sprites fuera
+L 0xA9A2 ganadora_fuera            Uno
+L 0xA9AC ganadora_va               Cada 8 cuadros, encendido o apagado
+C 0xA9C2 la X de la pareja
+C 0xA9CF los otros tres, fuera
+L 0xA9D7 ganadora_fuera3           Uno
+D 0xA9DD 0xA9EB ganadora_tabla  El sprite apagado y encendido, y la X de las seis parejas
+F 0xA9DD 4,4,6
+L 0xA9EB pago_paso                 Cada dos cuadros, el permiso para un punto del pago (0xF0E9); al acabar, deja de parpadear
+L 0xAA07 jinete_jugador            El jinete: el latigo (boton 1), su efecto en la velocidad y, sin fuerza, el paso mas lento
+C 0xAA07 el jinete?
+C 0xAA12 el latigo
+C 0xAA15 sus cuentas
+C 0xAA18 la velocidad
+C 0xAA1B le queda fuerza?
+C 0xAA25 sin fuerza: el paso 7 (0x1C)
+L 0xAA2F velocidad_jugador         Las dos esperas (0xF0D1 y 0xF0D3) y lo que toca segun los bits 3-4 de 0xF0D5 (0xAB15)
+L 0xAA37 velocidad_espera2         ...
+L 0xAA42 velocidad_espera3         ...
+C 0xAA45 el estado...
+C 0xAA4C ...por la tabla
+L 0xAA54 velocidad_baja            0: la velocidad baja un punto (0-4) y espera
+C 0xAA58 en 0, se queda
+L 0xAA5E velocidad_espera          La espera
+L 0xAA64 velocidad_pon             El paso de la velocidad (0xAB1D) en el caballo del jugador
+L 0xAA74 velocidad_sigue           2 o 3: si se acaba la espera, al estado 0
+L 0xAA8C velocidad_igual           Sigue igual
+L 0xAA93 velocidad_sube            1: el latigo sube la velocidad; en la 5, la fuerza baja
+C 0xAA9A 5?
+C 0xAA9F un punto mas, al estado 2
+L 0xAAB0 latigo_cansa              El latigo de mas: la fuerza y las cuentas del caballo, un poco menos (0xAAFC)
+L 0xAAC6 latigo_cansa_uno          ...
+L 0xAACD latigo_cansa_fin          La velocidad, un punto menos
+L 0xAAD0 cansa                     Una palabra menos lo de la carrera (0xAAFC), sin bajar de 0
+L 0xAADC cansa_resta               ...
+L 0xAAF3 cansa_pon                 ...
+D 0xAAFC 0xAB05 latigo_coste  Lo que cuesta el latigo de mas en cada carrera
+F 0xAAFC 9
+L 0xAB05 caballo_jugador           HL = el byte del paso del caballo del jugador (0xE041 + 4 x (n - 1))
+L 0xAB08 caballo_jugador_n         ...en la tabla HL
+L 0xAB10 suma_a                    HL += A
+D 0xAB15 0xAB27 velocidad_tablas  Los cuatro estados del latigo, los cinco pasos de la velocidad (de 0x60 a 0x84) y las tres esperas
+F 0xAB15 w4,5,w2,1
+L 0xAB27 latigo_pulsa              El boton 1: un latigazo (hasta 16 en cola) y el latigo del jinete
+C 0xAB27 sin latigo
+C 0xAB2C el boton 1?
+L 0xAB38 latigo_nuevo              Una vez por pulsacion
+L 0xAB56 latigo_lleno              16 ya: nada
+L 0xAB5C latigo_cuentas            Las cuentas de los latigazos: cuando una llega a 0, sale de la cola y la velocidad sube
+L 0xAB64 latigo_cola_uno           Una
+L 0xAB6C latigo_sale               Sale: al estado 1 y la cola corre
+L 0xAB86 latigo_cola               Uno menos en la cola
+L 0xAB8E fuerza_jugador            La fuerza del caballo del jugador al salir (0xF0E7), para la barra
+L 0xAB99 barra_cuenta              Lo que le queda: la fuerza x 63 entre la de la salida (0-63, 0xF0E6)
+L 0xABBB barra_vacia               Nada
+L 0xABC0 cuentas_jugador           DE = la cuenta del caballo A (0xF080 + (A - 1) x 8)
+L 0xABCC premio_jinete             El premio del jinete: si su caballo llega primero o segundo, el de la carrera (0xAC01) a su dinero
+C 0xABD7 el puesto
+C 0xABDC primero o segundo
+C 0xABE9 el dinero del jugador 1 (BCD)
+C 0xABF6 a la pantalla
+D 0xAC01 0xAC13 premios_jinete  Los premios de las nueve carreras, en BCD (centenas): 1ST y 2ND
+F 0xAC01 2
+L 0xAC13 siguiente8                HL + 8 e IX + 4
+# ======================================================================
+# LOS DIBUJOS, LAS PANTALLAS Y LA MUSICA
+# ======================================================================
+# Los 2 KB de 0xAC1B van enteros a los dibujos de los sprites (0x3800), pero
+# en los huecos de los sprites que no se usan hay datos: las filas de arriba y
+# de abajo de la pantalla de la carrera y la musica de la primera carrera.
+D 0xAC1B 0xAC9B sprites_cursores  Los dibujos de sprite 0-3 (16 x 16): el cursor de la apuesta (0 y 1), el punto del plano (2) y el cursor de la seleccion (3)
+F 0xAC1B 16
+D 0xAC9B 0xAD5B pantalla_arriba  Las seis filas de arriba de la pantalla de la carrera (ODDS, las cuotas, el recuadro y el ovalo); van tambien a los sprites 4-9, que no se usan
+F 0xAC9B 32
+D 0xAD5B 0xAD9B pantalla_abajo  Las dos filas de abajo: 1UP-4UP, el dinero y MIN-MAX (sprites 10-11)
+F 0xAD5B 32
+D 0xAD9B 0xADBC musica_primera_a  La musica de la primera carrera, canal 0 (con 0xBD89); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xAD9B 3
+D 0xADBC 0xB3DB sprites  Los dibujos de sprite 13-61: los caballos (tres sprites cada dibujo), los jinetes con su numero, el latigo, la caida y la barra
+F 0xADBC 16
+D 0xB3DB 0xB435 caballo_dibujos  Los diez dibujos del caballo: para cada uno de sus tres sprites, el dibujo, la Y y la X (9 bytes)
+F 0xB3DB 9
+D 0xB435 0xB835 casillas  Las casillas 0x00-0x7F: los arbustos, las cosas sueltas (0x13-0x1A), el agua de la ria (0x1B-0x1E), los bordes del recuadro, las letras en ASCII (0x30-0x5F) y las letras grandes del titulo (0x60-0x7F)
+F 0xB435 8
+D 0xB835 0xBBF5 casillas_altas  Las casillas 0x80-0xF7: las cifras pequenas y grandes, 1UP-4UP, MIN, MAX, ODDS, las parejas, RACE, GRASS, DIRT, las distancias, el ovalo, el cartel de CASIO, la valla de abajo, los postes y la meta; la copia de 1 KB sigue por los colores
+F 0xB835 8
+D 0xBBF5 0xBCF5 colores  Los colores de las casillas 0x00-0x1F (8 bytes cada una); en 0xBC8D, los de las cosas sueltas en la hierba
+F 0xBBF5 8
+D 0xBCF5 0xBD35 colores_tierra_sueltas  Los colores de las cosas sueltas (0x13-0x1A) en la tierra
+F 0xBCF5 8
+D 0xBD35 0xBD89 titulo  El titulo de la seleccion: CASIO y 大障害競馬 en letras grandes, 14 x 6 casillas
+F 0xBD35 14
+D 0xBD89 0xBDCF musica_primera_b  La musica de la primera carrera, canal 1; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBD89 3
+D 0xBDCF 0xBE02 fanfarria_a  La fanfarria de la salida, canal 0; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBDCF 3
+D 0xBE02 0xBE33 fanfarria_b  La fanfarria de la salida, canal 1; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBE02 3
+D 0xBE33 0xBE49 sonido_caida  La caida del jinete (canal 1); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBE33 3
+D 0xBE49 0xBE56 sonido_cobra  Alguien cobra (canales 1 y 2); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBE49 3
+D 0xBE56 0xBE6C musica_game_over_a  GAME OVER, canal 0; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBE56 3
+D 0xBE6C 0xBE7F musica_game_over_b  GAME OVER, canal 1; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBE6C 3
+D 0xBE7F 0xBE8E musica_carrera  La carrera, canal 0: sus cinco primeras notas y la salida (0xBE8E); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBE7F 3
+D 0xBE8E 0xBEA1 sonido_salida  La salida (canal 2): el final de la musica de la carrera; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBE8E 3
+D 0xBEA1 0xBEC9 sonido_salto  El salto (canal 2); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBEA1 3
+D 0xBEC9 0xBEDC sonido_latigo  El latigo (canal 1); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBEC9 3
+D 0xBEDC 0xBF07 musica_fin_a  Las nueve carreras hechas (RACE END), canal 0; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBEDC 3
+D 0xBF07 0xBF32 musica_fin_b  RACE END, canal 1; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBF07 3
+D 0xBF32 0xBF54 musica_premio_a  El premio del jinete (primero o segundo), canal 1; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBF32 3
+D 0xBF54 0xBF76 musica_premio_b  El premio del jinete, canal 2; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBF54 3
+D 0xBF76 0xBF7D sonido_golpe  El golpe con algo suelto (canal 1); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBF76 3
+D 0xBF7D 0xBF8A musica_llegada_a  La llegada, canal 0; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBF7D 3
+D 0xBF8A 0xBF97 musica_llegada_b  La llegada, canal 1; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBF8A 3
+D 0xBF97 0xBFB9 musica_campeon_a  El primero en la carrera 9, canal 1; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBF97 3
+D 0xBFB9 0xBFDD musica_campeon_b  El primero en la carrera 9, canal 2; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+F 0xBFB9 3
+D 0xBFDD 0xC000 relleno  El final de la ROM, a 0xFF
+F 0xBFDD 16
+D 0x888E 0x88AF textos_horse_select  HORSE SELECT JOY y START PUSH TRIG 2 (el espacio es la hierba, 0xE2-0xE4); PUSH TRIG 2 se usa tambien solo (0x88A4)
+F 0x888E 16,17
+C 0x9A43 el primer sprite...
+C 0x9A46 ...el segundo...
+C 0x9A49 ...y el tercero
+C 0x9A50 x 8...
+C 0x9A53 ...+ 1: x 9
+C 0x9A5C el dibujo
+C 0x9A61 la Y
+C 0x9A66 la X
+C 0x9A6B el dibujo
+C 0x9A70 la Y
+C 0x9A75 la X
+C 0x9A7A el dibujo
+C 0x9A7F la Y
+C 0x9A84 la X
+C 0x9A8A de sprite en sprite
+C 0x9A8D la Y del caballo
+C 0x9A91 mas la del primero
+C 0x9A93 el segundo
+C 0x9A97 el tercero
+C 0x9AA4 sin correr la X
+C 0x9AAB la X del sprite
+C 0x9AAE dentro?
+C 0x9AB3 por la izquierda?...
+C 0x9AB7 ...la X corrida 32 pixeles (bit 7 del color)
+C 0x9ABB el segundo
+C 0x9AC2 dentro?
+C 0x9AC5 su X
+C 0x9ACA fuera: Y = 0xC2
+C 0x9ACD por la izquierda?
+C 0x9AD1 ...corrida
+C 0x9AD5 el tercero
+C 0x9ADC dentro?
+C 0x9ADF su X
+C 0x9AE4 fuera
+C 0x9AE8 por la izquierda?
+C 0x9AEB ...corrida
+C 0x9AF0 H = 0 y B = 0 (sin correr)
+C 0x9AF7 negativo: H = 0xFF
+C 0x9AFD dentro: A = la X
+C 0x9B02 mas a la izquierda: fuera
+C 0x9B08 NC: dentro
+C 0x8408 2 KB a la VRAM (LDIRVM)
+C 0x8411 a 0xE800...
+C 0x8417 ...1 KB
+C 0x841C a 0xEC00...
+C 0x8422 ...1 KB
+C 0x8427 a la tabla de patrones...
+C 0x842A ...2 KB
+C 0x8433 a 0xE800...
+C 0x8439 ...256 bytes
+C 0x843E desde 0xE900
+C 0x8444 a la tabla de colores...
+C 0x8447 ...2 KB
+C 0x8452 48 casillas (FILVRM)
+C 0x845C en 0xE500...
+C 0x845F ...256...
+C 0x8462 ...512...
+C 0x8465 ...y 768
+C 0x846E 192 bytes
+C 0x8479 64 bytes
+C 0x8482 16 bytes...
+C 0x8487 ...a cero
+C 0x848D estado 2, paso 1
+C 0x8703 512 bytes en 0xE800...
+C 0x870B ...con 0x1E
+C 0x870E a la tabla de colores...
+C 0x8711 ...de las casillas 0x30-0x5F...
+C 0x8717 ...en los tres tercios
+C 0x871D a 0xE800, 128 bytes...
+C 0x8725 ...y otros 128
+C 0x872D a las casillas 0x60-0x7F...
+C 0x8736 ...de los tres tercios
+C 0x873E 128 bytes
+C 0x8745 128 bytes
+C 0x874A sus colores...
+C 0x874D ...en 0x2300...
+C 0x8753 ...de los tres tercios
+C 0x8759 a la tabla de nombres...
+C 0x875C ...768 bytes
+C 0x8765 0: el jinete
+C 0x8772 la demostracion
+C 0x8776 1-4: la apuesta
+C 0x84B3 (0xBD35)
+C 0x84B9 fila 7, columna 10...
+C 0x84BC ...13 letras
+C 0x84C4 fila 9, columna 7
+C 0x84C7 19 letras
+C 0x84CF fila 11
+C 0x84DA fila 13
+C 0x84E5 fila 15
+C 0x84F0 fila 17
+C 0x84FB fila 19, columna 10...
+C 0x84FE ...14 letras
+C 0x8506 fila 21, columna 9
+C 0x8511 fila 23, columna 6...
+C 0x8514 ...22 letras
+C 0xA318 el contador de jugadores
+C 0xA319 lo apostado a la pareja (BCD)
+C 0xA31F B: los puntos
+C 0xA325 en 0xF0D0
+C 0xA328 la cuota
+C 0xA32D aun no
+C 0xA332 + la cuota...
+C 0xA333 ...en BCD
+C 0xA334 el byte bajo del dinero
+C 0xA339 el acarreo, al alto
+C 0xA33D el byte alto
+C 0xA340 los contadores
+C 0xA345 IY - 0xE02F...
+C 0xA34C ...entre 2: el jugador x 2...
+C 0xA350 ...para la tabla de sitios
+C 0xA355 su sitio
+C 0xA357 su dinero
+C 0xA35C lo de antes
+C 0xA361 el permiso, gastado
+C 0xA364 IY otra vez al jugador
+C 0xA367 un punto menos...
+C 0xA369 ...en BCD
+C 0xA36B quedan?
+C 0xA36E el dinero del jugador siguiente
+C 0xA373 sus apuestas
+C 0xA378 los cuatro
+C 0xA380 bit 7: acabado
+C 0x9078 los arbustos
+C 0x9079 la fila 0 de la columna que entra
+C 0x907F 5 casillas
+C 0x9081 la fila 1
+C 0x9089 la fila 2
+C 0x9091 HL = el cartel
+C 0x9092 hay cartel?
+C 0x9094 encima, en la fila 1...
+C 0x9097 ...4 casillas
+C 0x909D la columna de la pista...
+C 0x909F ...en DE
+C 0x90A0 la fila 0
+C 0x90A5 la fila siguiente (32 - 5)
+C 0x90AB la fila 1
+C 0x90B6 la fila 2
+C 0x90BB HL = el cartel
+C 0x90BC hay cartel?
+C 0x90BE de vuelta a la fila 1, una mas a la derecha...
+C 0x90C5 ...4 casillas
+C 0x90CB la columna...
+C 0x90CD dos casillas de la fila 0
+C 0x90D1 el resto del arbusto, no
+C 0x90D4 la fila siguiente (32 - 2)
+C 0x90DA la fila 1
+C 0x90E7 la fila 2
+C 0x90EC la pista montada...
+C 0x90EF ...a la fila 6...
+C 0x90F2 ...16 filas (LDIRVM)
+C 0x8F92 la distancia...
+C 0x8F95 ...por la tabla 0x9017
+C 0x8F9D y el paso de la columna que se pinta
+C 0x8FA3 12 filas de 32
+C 0x8FAC 12 filas de 5
+C 0x8FB5 el arbusto o el cartel del paso...
+C 0x8FB8 ...en la columna que entra
+C 0x8FBE seis columnas
+C 0x8FC3 el paso siguiente
+C 0x8FC9 su arbusto
+C 0x8FCE en la columna BC
+C 0x8FD2 cinco casillas mas a la derecha
+C 0x8FD8 una columna menos
+C 0x8FE2 el paso siguiente
+C 0x8FE5 su arbusto
+C 0x8FE9 las dos ultimas casillas
+C 0x8FEF en la columna que entra, el borde
+C 0x8FFA 16 parejas
+C 0x8FFC la valla: 0xE0...
+C 0x8FFF ...y 0xE1
+C 0x9007 12 filas
+C 0x9009 la linea de la salida
+C 0x900B la fila siguiente
+C 0xABCC la carrera...
+C 0xABD2 ...x 2...
+C 0xABD3 ...en la tabla de premios
+C 0xABDE el tercero o el cuarto: nada
+C 0xABDF el premio del primero o del segundo
+C 0xABE4 el jinete?
+C 0xABEC el dinero...
+C 0xABED ...mas el premio...
+C 0xABEE ...en BCD
+C 0xABF0 el acarreo...
+C 0xABF2 ...al byte alto
+C 0xABFA ...y su dinero
+C 0xA0C6 la cuenta de la carrera
+C 0xA0C9 una
+C 0xA0CD las de los cuatro caballos
+C 0xA0D0 cuatro
+C 0xA0D2 la palabra
+C 0xA0D6 el total
+C 0xA0DA ...3
+C 0xA0DD (0xA184)
+C 0xA0E0 DE = el tercio
+C 0xA0E6 en las dos siguientes
+C 0xA0E9 el tercio, a DE'
+C 0xA0EC HL' = el total
+C 0xA0EE menos un tercio...
+C 0xA0F0 ...y otro
+C 0xA0F4 lo que sobra...
+C 0xA0F5 ...en la cuarta
+C 0xA0F8 la siguiente
+C 0x9268 uno de ocho
+C 0x926B x 2
+C 0x926E los sitios
+C 0x9272 DE = el sitio
+C 0x9278 uno de cuatro
+C 0x927B x 2
+C 0x927E los dibujos
+C 0x9282 HL = el dibujo
+C 0x9286 los umbrales
+C 0x928D se pone?
+C 0x928F dos casillas
+C 0x8659 la RAM del juego a cero
+C 0x865C los sprites fuera
+C 0x8662 a las casillas 0x60-0x7F...
+C 0x8665 ...256 bytes...
+C 0x8668 ...de los tres tercios
+C 0x866E rojo (0x60)...
+C 0x8670 ...256 bytes
+C 0x8675 a sus colores...
+C 0x8678 ...en 0x2300
+C 0x8683 512 bytes...
+C 0x8686 ...de 0xF1
+C 0x8691 a los colores de las casillas 0x30-0x5F...
+C 0x8697 ...de los tres tercios
+C 0x869D a la tabla de nombres...
+C 0x86A0 ...768 bytes
+C 0x86A9 estado 2, paso 2
+C 0xA8CE (0xC2)
+C 0xA8DC ...menos 1...
+C 0xA8DD ...en la tabla de las carreras
+C 0xA8E2 la distancia
+C 0xA8EF ...por la distancia
+C 0xA8F1 en 0xF0EA
+C 0xA8F7 bit 7: las cuotas se han hecho
+C 0xA8FC 24 bytes
+C 0xA906 el dinero de los cuatro
+C 0xA909 las cuotas
+C 0xA913 ...como un jugador
+C 0xA915 la tabla de los modos
+C 0xA91C en 0xF0C9
+C 0xA925 0xF0D0-0xF0D5: el pago y el latigo
+C 0xA93E los cuatro sprites de la barra (0xE1D8)
+C 0xA94E el jinete?
+C 0xA957 sin espera entre movimientos
+C 0xA95B la primera casilla
+C 0xA960 los dos sprites del cursor
+C 0xA963 (0xA971)
+C 0x8616 lo de ahora
+C 0x8619 LDIRVM al primer tercio
+C 0x861E el segundo tercio...
+C 0x8627 ...LDIRVM
+C 0x862C el tercer tercio...
+C 0x8632 ...LDIRVM
+C 0x9183 el paso
+C 0x9185 los 16 pasos (el nibble alto)...
+C 0x918A ...en la serie
+C 0x9191 la fila de 0x933D...
+C 0x9193 ...x 16
+C 0x9199 la fila
+C 0x919E el paso dentro de la fila
+C 0x91A4 el obstaculo
+C 0x9FDD es el del jugador?
+C 0x9FDE si: no se toca
+C 0x9FE4 su cuenta
+C 0x9FE8 en HL'...
+C 0x9FEA ...x 8
+C 0x9FF3 el paso mas lento
+C 0x9FFA menos 4
+C 0xA000 el paso: 4 - el cociente
+C 0xA006 x 4: en los bits 2-4
+C 0xA008 el byte del paso...
+C 0xA00B ...sin los bits 2-4...
+C 0xA00D ...con los nuevos
+C 0xA011 lo de antes
+C 0xA014 las cuentas siguientes
+C 0xA017 los cuatro
+C 0xA1F4 el factor de las cuotas
+C 0xA200 1...
+C 0xA201 ...y 2
+C 0xA20A 1 y 3
+C 0xA214 1 y 4
+C 0xA21E 2 y 3
+C 0xA228 2 y 4
+C 0xA232 3 y 4
+C 0xA23D lo de cada pareja...
+C 0xA240 ...y alli las cuotas
+C 0xA246 sin parte alta
+C 0xA24E DE = lo de la pareja
+C 0xA253 el factor x lo de la pareja
+C 0xA25A la parte alta de la multiplicacion
+C 0xA25E el cociente
+C 0xA260 uno mas
+C 0xA261 menos la suma
+C 0xA263 cabe otra vez
+C 0xA266 quedan partes altas?
+C 0xA26A una menos
+C 0xA26F el cociente
+C 0xA274 al menos 2
+C 0xA276 2
+C 0xA279 la cuota
+C 0xA27B las seis
+C 0xA280 de 10 en 10
+C 0xA282 la cuota
+C 0xA283 las decenas
+C 0xA286 menos de 10?
+C 0xA288 10 menos...
+C 0xA289 ...una decena mas
+C 0xA28C las unidades
+C 0xA28D las decenas...
+C 0xA28E ...arriba
+C 0xA292 ...con las unidades
+C 0xA293 las centenas de lo que se ha juntado
+C 0xA295 menos 10
+C 0xA299 una mas
+C 0xA29C lo que sobra
+C 0xA29F las centenas...
+C 0xA2A0 ...arriba
+C 0xA2A6 con lo de abajo
+C 0xA2A7 mas de 99?
+C 0xA2AB 99
+C 0xA2AD la cuota en BCD
+C 0xA2AF las seis
+C 0xA2B4 al marcador
+C 0xA49C del primero...
+C 0xA49F ...y del segundo sprite
+C 0xA4A5 la palanca
+C 0xA4A6 la de antes
+C 0xA4A9 ha cambiado: espera
+C 0xA4AB alguna direccion?
+C 0xA4AE B = las direcciones
+C 0xA4B3 aun espera
+C 0xA4B9 bit 7: derecha
+C 0xA4BD bit 6: abajo
+C 0xA4C1 bit 5: arriba
+C 0xA4C4 la columna 0 de una fila?
+C 0xA4D2 una a la izquierda
+C 0xA4D3 la casilla
+C 0xA4D6 x 2
+C 0xA4D7 la X y la Y...
+C 0xA4DD la X del primer sprite...
+C 0xA4E3 ...y la del segundo
+C 0xA4E8 la Y de los dos
+C 0xA4EE (en 0xF0B3)
+C 0xA4F3 la espera
+C 0xA4F7 la columna 5 de una fila?
+C 0xA507 una a la derecha
+C 0xA50A la primera fila?
+C 0xA50E una fila arriba
+C 0xA512 el jinete?
+C 0xA518 el jinete: la tabla del jugador
+C 0xA51E cuantos juegan (bits 5-6)...
+C 0xA520 ...a 0-3
+C 0xA526 una fila abajo...
+C 0xA52B ...cabe?
+C 0xA52E no: se queda
+C 0x912D una casilla de la columna que entra...
+C 0x912E ...en la columna 0
+C 0x9130 la fila siguiente
+C 0x9135 en la columna que entra, 5 mas
+C 0x913B 16 filas
+C 0x9140 (0xEF80-0xEFD5)
+C 0x9146 todo un byte mas alla
+C 0x914E un paso de los cinco
+C 0x9150 otra vez 5
+C 0x9155 un paso de carrera menos
+C 0x9159 no llega a 0
+C 0x915E la columna del paso
+C 0x9161 el paso...
+C 0x9166 ...no es el ultimo
+C 0x9168 velocidad 0
+C 0x9958 X entre 8
+C 0x995D en DE
+C 0x9962 Y redondeada a 8...
+C 0x9965 ...x 4: la fila x 32
+C 0x9967 mas la columna
+C 0x996B mas la tabla de nombres
+C 0x996C RDVRM
+C 0xA03B el primer numero
+C 0xA03E BC = el primero
+C 0xA041 el segundo es negativo?
+C 0xA043 sin el signo
+C 0xA046 positivo
+C 0xA04A negativo: 0xFF...
+C 0xA04B ...complemento a dos
+C 0xA04D la suma...
+C 0xA04E ...mas la de la distancia
+C 0xA051 la fuerza...
+C 0xA056 el byte de despues...
+C 0xA058 ...solo los bits 0-1
+C 0xA059 el caballo siguiente
+C 0xA05D cuatro
+C 0xA05F la distancia
+C 0xA063 la tabla de los pasos
+C 0xA069 los pasos de la carrera
+C 0xA070 la fuerza...
+C 0xA074 ...de los cuatro
+C 0xAB99 el jinete?
+C 0xAB9E la cuenta del caballo del jugador
+C 0xABA1 es 0?
+C 0xABA5 x 63
+C 0xABAB la de la salida
+C 0xABAE es 0?
+C 0xABB3 entre la de la salida
+C 0xABB7 lo que le queda, de 0 a 63
+C 0xABC0 el caballo - 1
+C 0xABC3 x 8
+C 0xABC6 en 0xF080
+C 0x9038 el paso, en la tabla
+C 0x903C el byte...
+C 0x903D ...la mitad baja o alta
+C 0x9047 el nibble
+C 0x904A un arbusto (0-3)?
+C 0x904C con cartel: el arbusto 3
+C 0x904F x 16
+C 0x9055 los arbustos
+C 0x9059 el nibble...
+C 0x905C ...menos de 4:...
+C 0x905E ...sin cartel
+C 0x9060 el cartel: el nibble - 4...
+C 0x9064 ...x 4
+C 0x9068 la primera mitad?
+C 0x906A la segunda: 12 carteles mas alla
+C 0x9075 A = 1: hay cartel
+C 0x95AE el byte del caballo
+C 0x95AF a 0xE13F
+C 0x95B4 los bits 2-4
+C 0x95B8 en la tabla
+C 0x95BF la velocidad
+C 0x95C1 el caballo siguiente, 4 bytes mas alla
+C 0x95C7 la velocidad siguiente
+C 0x95CA los cuatro
+C 0x95CF los cuatro
+C 0x95D2 bits 5-7
+C 0x95DB jinete?
+C 0x95E1 el caballo - 1
+C 0x95E7 el latigo...
+C 0x95EF el paso de la pista...
+C 0x95F0 ...entre 0x01 y 0xAF?
+C 0x95F7 el boton 2?
+C 0x95FF arriba o abajo?
+C 0x9603 bit 7: cambia de calle...
+C 0x9605 ...abajo?
+C 0x9609 bit 6
+C 0x960B el byte +0x19 de cada caballo
+C 0x960E lo que hacen
+C 0x9613 lo que hace...
+C 0x9614 ...a su byte
+C 0x9616 el caballo siguiente (32 bytes)
+C 0x961C los cuatro
+C 0x9D5C el numero
+C 0x9D63 x 4
+C 0x9D64 + el numero
+C 0x9D67 x 3
+C 0x9D6B los dibujos del jinete
+C 0x9D6F el dibujo
+C 0x9D70 al sprite
+C 0x9D74 dy
+C 0x9D76 la Y del caballo + dy
+C 0x9D77 la Y
+C 0x9D7A dx
+C 0x9D7E la X del caballo (16 bits)
+C 0x9D81 + dx
+C 0x9D86 dentro de la pantalla?
+C 0x9D89 la X
+C 0x9D8E fuera
+C 0x9D91 por la izquierda?
+C 0x9D94 la X corrida 32 pixeles
+C 0xAB2A sin latigo
+C 0xAB2F la cola del latigo
+C 0xAB33 pulsado
+C 0xAB35 suelto: se puede volver a pulsar
+C 0xAB38 ya contado?
+C 0xAB3C bits 6 y 7: contado
+C 0xAB3F los latigazos en cola
+C 0xAB43 16?
+C 0xAB47 uno mas
+C 0xAB49 su sitio en la cola
+C 0xAB4C la espera (0x20 cuadros)
+C 0xAB50 el byte del paso del caballo...
+C 0xAB53 ...con el latigo (bit 5)
+C 0xAB5F cuantos en cola
+C 0xAB61 ninguno
+C 0xAB63 sus esperas
+C 0xAB64 una menos
+C 0xAB65 se acaba: sale
+C 0xAB69 todos
+C 0xAB6C el estado del latigo...
+C 0xAB71 ...a 1: la velocidad sube
+C 0xAB78 la cola...
+C 0xAB7A ...corre un sitio
+C 0xAB7B lo que queda de cola
+C 0xAB82 nada
+C 0xAB89 uno menos
+C 0xAB8C el mismo sitio otra vez
+C 0xAB8E el caballo del jugador
+C 0xAB91 su cuenta
+C 0xAB95 a 0xF0E7
+C 0x80A3 lo de quien llama
+C 0x80AA HL = el paso
+C 0x80AD los 6 bits bajos de la cuenta
+C 0x80B1 la suma
+C 0x80B3 a la cuenta
+C 0x80B5 x 4: lo que pasa de 64, en H
+C 0x80B7 lo de quien llama
+C 0x90F9 lo de quien llama
+C 0x9103 ...
+C 0x9110 la cuenta (los dieciseisavos)...
+C 0x9111 ...mas lo de este cuadro
+C 0x9113 lo que queda
+C 0x9116 lo que pasa de 16
+C 0x9119 nada: la pista no corre
+C 0x911D de la ultima fila hacia atras...
+C 0x9120 ...512 bytes
+C 0x9123 todo un byte a la derecha
+C 0x9127 la columna 0
+C 0x912A la columna que entra, desde la fila 0, casilla 4
+C 0x9DB9 el bloque del caballo
+C 0x9DBD estado 0 o 1?
+C 0x9DC1 2 o 3?
+C 0x9DC5 4 o 5?
+C 0x9DCC el sitio del caballo
+C 0x9DCE el dibujo
+C 0x9DD1 el byte +5 del caballo...
+C 0x9DD5 ...su dibujo
+C 0x9DD8 la Y que le toca
+C 0x9DDD la Y del sprite...
+C 0x9DE0 ...mas eso
+C 0x9DEE C x 2
+C 0x9DF3 la palabra
+C 0x9DF6 en HL
+C 0xA386 la espera
+C 0xA388 no hay
+C 0xA38E se apuesta?
+C 0xA394 el boton 2?
+C 0xA397 los dos sprites del cursor...
+C 0xA39C ...fuera
+C 0xA39F se acabo la apuesta
+C 0xA3A9 el boton 1?
+C 0xA3AD cambia de modo
+C 0xA3B0 la espera de la repeticion
+C 0xA3B3 mover?
+C 0xA3BC un cuadro menos
+C 0xA3BF otra vez 12
+C 0xA3C1 el color del cursor...
+C 0xA3C5 ...rojo o transparente
+C 0xA3CA en los dos sprites
+C 0xA3D4 C = la palanca
+C 0xA3D5 la de antes
+C 0xA3D8 ha cambiado?
+C 0xA3DF sin repeticion
+C 0xA3E2 sin espera
+C 0xA3E4 ya se repite?
+C 0xA3EA 56 cuadros
+C 0xA3EF la espera...
+C 0xA3F1 ...se acaba?
+C 0xA3F3 un cuadro menos
+C 0xA3F6 8 cuadros
+C 0xA3F9 el color del cursor a 0 (transparente)
+C 0xA403 menos 0x0F...
+C 0xA407 los dineros
+C 0xA411 bit 6: abajo
+C 0xA415 el dinero
+C 0xA419 menos 0x0F...
+C 0xA41C ...entre 2...
+C 0xA41F ...y entre 4, sumados: el jugador x 6
+C 0xA421 las apuestas
+C 0xA424 las de este jugador
+C 0xA429 seis
+C 0xA42B una...
+C 0xA42C ...es 0?
+C 0xA42F una mas
+C 0xA434 tres?
+C 0xA43E la del cursor
+C 0xA441 tiene?
+C 0xA444 si: sube
+C 0xA448 menos de tres
+C 0xA449 el dinero, tres bytes
+C 0xA450 no es 0
+C 0xA452 es 0: no apuesta
+C 0xA455 la apuesta de la casilla
+C 0xA459 99?
+C 0xA45D un punto menos...
+C 0xA463 ...con el acarreo...
+C 0xA469 ...en los tres bytes
+C 0xA470 la apuesta + 1
+C 0xA475 la apuesta de la casilla
+C 0xA479 no hay
+C 0xA47C un punto mas...
+C 0xA482 ...con el acarreo...
+C 0xA488 ...en los tres bytes
+C 0xA48F la apuesta - 1
+C 0xA492 la apuesta
+C 0xA493 el dinero en la pantalla
+C 0xA496 y las apuestas
+C 0xA992 el pago?
+C 0xA999 la pareja parpadea (bit 3)?
+C 0xA99E de 4 en 4
+C 0xA9A1 cuatro
+C 0xA9A2 Y = 0xC2: fuera
+C 0xA9A8 la cuenta del parpadeo a 0
+C 0xA9AC un cuadro mas
+C 0xA9B1 cada 8 cuadros...
+C 0xA9B3 ...apagado (0) o encendido (4)
+C 0xA9BA en el sprite 0x12
+C 0xA9C5 su X
+C 0xA9CC en el sprite
+C 0xA9D2 los tres siguientes
+C 0xA9D7 fuera
+C 0xA9EB la cuenta del pago va?
+C 0xA9F1 un cuadro de cada dos
+C 0xA9F6 el permiso para un punto
+C 0xA9FB el pago se ha acabado?
+C 0xAA01 la cuenta, parada
+C 0x8BA0 las apuestas y los carteles
+C 0x8BAA el canal 2
+C 0x8BB3 la pista quieta
+C 0x8BB6 los cuatro caballos al estado 0
+C 0x8BC5 la demostracion?
+C 0x8BCA el jinete?
+C 0x8BD1 cuarto?
+C 0x8BD9 la carrera 9?
+C 0x8BE1 el canal 0...
+C 0x8BE3 ...la llegada (0xBF7D)
+C 0x8BE9 el canal 1...
+C 0x8BEB ...(0xBF8A)
+C 0x8BF6 paso 3...
+C 0x8BFA ...del estado 3
+C 0x8C02 sumados con OR
+C 0x8C05 un byte
+C 0x8C0E la carrera 9?
+C 0x8C1B en la cuenta
+C 0x8EAE la carrera...
+C 0x8EB3 ...menos 1...
+C 0x8EB5 ...x 4...
+C 0x8EB7 ...x 16...
+C 0x8EBA ...x 4 + x 16 = x 20
+C 0x8EBB los carteles
+C 0x8EC2 cinco filas
+C 0x8EC7 cuatro casillas...
+C 0x8ECA ...LDIRVM
+C 0x8ECE la fila siguiente de la pantalla...
+C 0x8ED4 ...y del cartel
+C 0x8ED9 las cinco
+C 0x92B5 C filas
+C 0x92B7 B casillas
+C 0x92BA una fila
+C 0x92BE la fila siguiente, 5 mas alla
+C 0x92C5 todas
+C 0x92CA la columna que entra, desde la fila 3
+C 0x92CD 12 filas de 5...
+C 0x92D0 ...el suelo al azar
+C 0x92D4 el borde (0x9012)
+C 0xAA0A el jinete?
+C 0xAA0D con caballo?
+C 0xAA1E su cuenta
+C 0xAA21 es 0?
+C 0xAA24 no: sigue
+C 0xAA28 el byte del paso...
+C 0xAA2B ...el paso 7, el mas lento
+C 0xAA2F la primera espera...
+C 0xAA34 ...ya es 0
+C 0xAA36 un cuadro menos
+C 0xAA3A la segunda espera
+C 0xAA41 un cuadro menos
+C 0xAA48 los bits 3-4...
+C 0xAA4A ...x 2
+C 0xAA4F la rutina
+C 0xAA53 a ella
+C 0xAA57 la velocidad (0-4)
+C 0xAA5C una menos
+C 0xAA5E 0x0020 cuadros...
+C 0xAA61 ...de espera
+C 0xAA64 los pasos de la velocidad
+C 0xAA6A el paso
+C 0xAA6B el byte del caballo del jugador...
+C 0xAA6F ...sin los bits 2-4...
+C 0xAA71 ...con el paso
+C 0xAA74 la espera
+C 0xAA79 ya es 0
+C 0xAA7B un cuadro menos
+C 0xAA81 aun no
+C 0xAA83 se acaba: al estado 0...
+C 0xAA8A ...y la velocidad baja
+C 0xAA8C la velocidad de ahora
+C 0xAA93 la velocidad...
+C 0xAA97 ...+ 1...
+C 0xAA9C ...pasa de 4: cansa y se queda
+C 0xAAA0 al estado 2
+C 0xAAA6 0x00C0 cuadros...
+C 0xAAA9 ...de espera
+C 0xAAB1 la fuerza del caballo del jugador...
+C 0xAAB8 ...menos lo de la carrera
+C 0xAABC sus cuentas
+C 0xAAC1 tres palabras
+C 0xAAC3 la primera
+C 0xAAC6 la siguiente que no sea 0...
+C 0xAACB ...de las tres
+C 0xAACE la velocidad, una menos
+C 0xAAD1 la palabra
+C 0xAAD6 no es 0
+C 0xAAD8 es 0: HL a la siguiente, con Z
+C 0xAADD la carrera...
+C 0xAAE1 ...lo que cuesta
+C 0xAAEC la palabra menos eso...
+C 0xAAF0 ...sin bajar de 0
+C 0xAAF5 guardada
+C 0xAAF8 NZ: hecho
+C 0x80E5 lo de quien llama
+C 0x80EB B x 32 (tres rrca)
+C 0x80EE en DE
+C 0x80F1 el canal
+C 0x80F4 desde +2
+C 0x8638 la semilla
+C 0x863C B = la semilla
+C 0x863E x 4...
+C 0x863F ...+ ella: x 5
+C 0x8641 ...a la mitad (rrca)
+C 0x8646 la nueva semilla
+C 0xA2D9 la suma
+C 0xA2DE E = 31 - las dos
+C 0xA2E1 por el factor
+C 0xA2E5 DE = el sitio
+C 0xA2E6 lo de la pareja
+C 0xA2EB a la suma
+C 0xA2EC en BC
+C 0xA589 es el del jugador?
+C 0xA58D al azar...
+C 0xA590 ...los bits 6-7
+C 0xA593 el byte del paso...
+C 0xA594 ...sin los bits 6-7...
+C 0xA596 ...con los nuevos
+C 0xA59B uno de cada cuatro...
+C 0xA59D ...el latigo
+C 0xA5A1 sin latigo
+C 0xA5A3 el byte del paso...
+C 0xA5A4 ...sin el bit 5...
+C 0xA5A6 ...con el latigo o no
+C 0xA5A9 el caballo siguiente
+C 0x85BB BC = B
+C 0x85BD una fila
+C 0x85C0 lo que queda
+C 0x85C4 DE + 32
+C 0x85C8 una fila menos
+C 0x893F aun suena
+C 0x8946 se acaba la cuenta: el caballo de la opcion
+C 0x894D el boton 1: tambien
+C 0x8952 la opcion
+C 0x8956 la misma?
+C 0x895C la de antes...
+C 0x895D ...x 4: su sprite
+C 0x8962 el color
+C 0x8968 la nueva...
+C 0x8969 ...x 4
+C 0x896E el color
+C 0x8971 cada 4 cuadros
+C 0x8979 negro
+C 0x9489 la direccion...
+C 0x948C ...por la tabla
+C 0x9491 los bits
+C 0x9716 el numero 0
+C 0x971B el 2...
+C 0x971F ...sprites 0x09-0x0B...
+C 0x9723 ...magenta (0x0D), calle de Y 0x61
+C 0x972B el 3...
+C 0x972F ...sprites 0x0C-0x0E...
+C 0x9733 ...rojo (6), calle de Y 0x7A
+C 0x973B el 4...
+C 0x973F ...sprites 0x0F-0x11...
+C 0x9743 ...azul (4), calle de Y 0x93
+C 0x97F9 el jinete del primero
+C 0x97FE el numero en el recuadro
+C 0x9806 el primero
+C 0x980A el tercero o mas
+C 0x980F entre 2...
+C 0x9810 ...de 0 a 7...
+C 0x9812 ...menos 1
+C 0x9816 la pareja
+C 0x9822 vuelve
+C 0x9CFF el numero 0
+C 0x9D08 el 2: sprite 0x03...
+C 0x9D0C ...sobre el caballo 2
+C 0x9D18 el 3: sprite 0x04...
+C 0x9D1C ...sobre el caballo 3
+C 0x9D28 el 4: sprite 0x05...
+C 0x9D2C ...sobre el caballo 4
+C 0x9F86 el byte alto
+C 0x9F8B las cuentas
+C 0x9F8E la mitad mas la cuenta, en DE'
+C 0x9F97 la primera no es 0
+C 0x9F99 la segunda...
+C 0x9F9E ...o la tercera
+C 0x9FA1 todas 0: no se guarda
+C 0x9C59 la animacion de la caida al suelo (0x9A38)
+C 0x9C5F el paso de la animacion
+C 0x9C64 el 4?...
+C 0x9C67 ...el jinete sale despedido
+C 0x9C6B el final?
+C 0x9C6E al paso 2
+C 0x9E56 lo de quien llama
+C 0x9E57 la cuenta del jinete...
+C 0x9E5A ...en +6
+C 0x9E5E pasa de 64?
+C 0x9E64 el punto...
+C 0x9E67 ...el ultimo?
+C 0x9E6B el siguiente
+C 0x9E6E el punto...
+C 0x9E72 ...x 3
+C 0x9E77 la trayectoria
+C 0x9E7C el sprite
+C 0xA5AF el caballo del jugador
+C 0xA5B2 lo que le queda
+C 0xA5B8 jinete?
+C 0xA5BD el pago?
+C 0xA5C2 algo?
+C 0xA5C8 los cuatro sprites de la barra
+C 0xA5CB vacia
+C 0xA5D1 los bits 4-5: el grupo
+C 0xA5D3 de 16 bytes
+C 0xA5D9 a los cuatro sprites
+C 0xA5E4 los bits 0-3
+C 0xA5E6 sin dibujo nuevo
+C 0xA5EC el dibujo 0xA8
+C 0xA5EE la X del sprite del final...
+C 0xA5F1 ...mas los bits 0-3
+C 0xA5F3 dibujo nuevo?
+C 0xA5F6 el dibujo
+C 0xA702 la X del primer sprite...
+C 0xA703 ...entre 32
+C 0xA709 7 menos eso...
+C 0xA70C ...mas la vuelta de la pista
+C 0xA70D de 0 a 0xBF
+C 0xA713 de 0 a 0x5F
+C 0xA719 con el bit 7: en la carrera
+C 0xA71B a 0xE050
+C 0xA720 el caballo siguiente (12 bytes de sprites)
+C 0xA724 los cuatro
+C 0xA729 los sprites 0x12-0x15
+C 0xA72E el contador de caballos
+C 0x9637 el borde izquierdo...
+C 0x9638 ...bit 7
+C 0x963E el caballo siguiente
+C 0x963F su numero
+C 0x9645 la velocidad de la pista
+C 0x964D en los cuadros pares
+C 0x9651 uno menos
+C 0x968A se borra la marca
+C 0x968C el byte +0x0D...
+C 0x9690 ...se mueve?
+C 0x9693 fuera la vuelta
+C 0x9694 el caballo C
+C 0x9696 su velocidad
+C 0x969B la de la pista
+C 0x9567 la casilla 0x80 + la cifra
+C 0x956C la siguiente, tres casillas mas alla
+C 0x956E la apuesta siguiente
+C 0x956F las seis
+C 0x9572 la fila siguiente
+C 0x9578 los jugadores
+C 0x8E49 los bits 4-6: la serie x 16...
+C 0x8E4C ...C = x 8...
+C 0x8E4E ...x 8 + x 4 = x 12
+C 0x8E56 en 0xE072
+C 0x952A la columna siguiente
+C 0x952B las unidades...
+C 0x952E ...casilla 0x60 + la cifra
+C 0x9536 las seis
+C 0x96EF la velocidad entre 32
+C 0x96F6 suma la cuenta
+C 0x96FB un punto menos de fuerza
+C 0x8C6C el estado del 1...
+C 0x8C70 ...del 2...
+C 0x8C74 ...del 3...
+C 0x8C78 ...y del 4
+C 0x901F una de cuatro...
+C 0x9021 ...de 0xE2 a 0xE5
+C 0x9025 una menos
+C 0x96C1 la velocidad entre 32
+C 0x96CE un punto menos de fuerza
+C 0x96D8 la velocidad entre 32
+C 0x96E5 un punto menos de fuerza
+C 0xA138 es 0?
+C 0xA13C una menos
+C 0xA140 la parte baja no es 0?
+C 0xA772 uno mas
+C 0xA779 el sprite siguiente
+C 0xA77B los cuatro
+C 0x87C2 la fila 2
+C 0x87C8 la fila 3
+C 0x87CE la fila 4
+C 0x87D4 la fila 5
+C 0x89BD en la fila 11
+C 0x89C9 en la fila 13
+C 0x8AC3 en la fila 11
+C 0x8ACC START PUSH TRIG 2 en la fila 13
+C 0x98CA X + 12
+C 0x98D0 Y - 16
+C 0x98DD X + 12
+C 0x98E3 Y - 18
+C 0x9934 su byte
+C 0x9938 dos columnas a la izquierda
+C 0x9940 los dos juntos
+C 0x9C1C la animacion del galope
+C 0x9C25 el ultimo de la serie?
+C 0x9C2E al paso 2
+C 0x9EC4 un cuadro mas
+C 0x9EC6 16: se acaba
+C 0x9ECA a los 8...
+C 0x9ECD ...de vuelta al azul
+C 0xA122 la palabra
+C 0xA128 menos DE
+C 0xA162 la palabra
+C 0xA168 menos DE
+C 0xA16C sin bajar de 0
+C 0xA664 el dinero de uno
+C 0xA667 el siguiente jugador
+C 0xA66C su sitio en la pantalla
+C 0x80C8 BC = C
+C 0x80CC el byte HL + C
+C 0x8CC5 suena?
+C 0x8CC9 la cuenta
+C 0x8CCD al estado 2, paso 1
+C 0x954C las decenas
+C 0x9553 no es 0
+C 0x957E WRTVRM
+C 0x9670 a la mitad
+C 0x9672 en +0x0D
+C 0x9676 el caballo siguiente
+C 0xA2C8 bit a 0: nada
+C 0xA2CA bit a 1: + DE
+C 0xA2CD se pasa de 16 bits...
+C 0xA2D1 ...a 0xF0B6
+C 0xA988 de 0 a 15
+C 0xA98C los cuatro de cada caballo
+C 0xA98F los cuatro caballos
+C 0x849E 26 sprites x 4
+C 0x84A6 detras, la marca de fin (0xD0)
+C 0x8A1F (0xBEDC)
+C 0x8A25 el canal 1...
+C 0x8A27 ...(0xBF07)
+C 0x8C4F (0xBE56)
+C 0x8C55 el canal 1...
+C 0x8C57 ...(0xBE6C)
+C 0x8D0C (0xBF32)
+C 0x8D12 el canal 2...
+C 0x8D14 ...(0xBF54)
+C 0x8D5F la cuenta
+C 0x8D63 la fanfarria
+C 0x8D66 paso 3...
+C 0x8D6A ...del estado 4: la carrera
+C 0x8D9A la carrera...
+C 0x8D9C ...menos 1
+C 0x8D9D en la tabla
+C 0x9173 el arbusto del paso...
+C 0x9176 ...en la columna que entra
+C 0x917C el obstaculo del paso...
+C 0x917F ...en la columna
+C 0x9703 cinco rrca: los bits 5-6 abajo...
+C 0x9708 ...0-3
+C 0x9857 en blanco
+C 0x9859 WRTVRM
+C 0x985F en blanco
+C 0x994E HL = A...
+C 0x9951 ...+ DE
+C 0x99F4 ya esta en su calle
+C 0x99F7 por encima?
+C 0x99FB por debajo: uno mas
+C 0x9BC1 el canal 2 suena?
+C 0x9BC6 el canal 2...
+C 0x9BC8 ...el salto
+C 0x9F3B el puesto (o 0)
+C 0x9F40 la Y del sprite 0
+C 0xA112 la palabra
+C 0xA117 mas DE
+C 0xA12F es 0?
+C 0xA132 la siguiente
+C 0xA17C la palabra anterior a 0
+C 0xA6A6 la cifra alta
+C 0xA6A9 aun sin cifras?
+C 0xA6AD en blanco
+C 0xA6C3 la cifra baja
+C 0xA6C6 aun sin cifras?
+C 0xA6CA en blanco
+C 0xA7A8 el caballo...
+C 0xA7AB ...x 2: su tabla
+C 0xA7B3 el punto x 2
+C 0xA7B7 la tabla + A
+C 0xA7B8 la palabra
+C 0x80D4 el siguiente
+C 0x80D6 los 8
+C 0x80D8 los B grupos
+C 0x8A46 el canal 1
+C 0x8A4A el canal 2
+C 0x8A52 uno menos
+C 0x8A56 es 0?
+C 0x8AE3 (0xBDCF)
+C 0x8AE9 el canal 1...
+C 0x8AEB ...(0xBE02)
+C 0x8B93 sin pago
+C 0x8B97 paso 1...
+C 0x8B9B ...del estado 2
+C 0x8C26 su musica
+C 0x8C29 512 cuadros
+C 0x8C2F al paso 8
+C 0x8C37 en la fila 11
+C 0x8C40 los sprites fuera
+C 0x9682 ya parada?
+C 0x9686 un poco mas lenta
+C 0x9FA3 la cuenta nueva (DE')
+C 0x9FA7 guardada, sin bajar de 0
+C 0xA14A el indice x 2
+C 0xA14C la palabra
+C 0xA6B1 la cifra de arriba
+C 0xA6B5 ya hay cifras
+C 0xA752 la vuelta
+C 0xA754 la X: 0xD7 menos eso
+C 0xA75A la Y de la recta de abajo
