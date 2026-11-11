@@ -1,0 +1,98 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Exciting Jockey - desensamblado comentado</title>
+<style>
+:root{--tinta:#cfd0d4;--suave:#83868f;--fondo:#000;--panel:#0c0e13;--linea:#23262e;
+  --rojo:#ff897d;--cyan:#65dbef;--verde:#3eb849;--oro:#ded087}
+@media (prefers-color-scheme:light){:root{--tinta:#191a1e;--suave:#5a5d66;--fondo:#e9e7e1;
+  --panel:#f7f6f2;--linea:#d0cdc5;--rojo:#b23f34;--cyan:#1c6b7c;--verde:#2b7734;--oro:#8a7420}}
+:root[data-theme="dark"]{--tinta:#cfd0d4;--suave:#83868f;--fondo:#000;--panel:#0c0e13;
+  --linea:#23262e;--rojo:#ff897d;--cyan:#65dbef;--verde:#3eb849;--oro:#ded087}
+:root[data-theme="light"]{--tinta:#191a1e;--suave:#5a5d66;--fondo:#e9e7e1;--panel:#f7f6f2;
+  --linea:#d0cdc5;--rojo:#b23f34;--cyan:#1c6b7c;--verde:#2b7734;--oro:#8a7420}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);padding:0 1.25rem 6rem;
+  font:15px/1.7 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.w{max-width:1120px;margin:0 auto}
+.n{max-width:68ch}
+h1,h2,h3,h4{font-weight:400;text-wrap:balance}
+a{color:var(--cyan)}
+img{image-rendering:pixelated;max-width:100%;height:auto;display:block}
+header.top{display:flex;flex-direction:column;align-items:center;gap:1.5rem;
+  padding:4rem 0 2rem;text-align:center}
+header.top img{width:min(100%,642px)}
+.claim{max-width:60ch;color:var(--suave);font-size:1.05rem}
+.claim b{color:var(--tinta);font-weight:400}
+.ficha{display:flex;flex-wrap:wrap;justify-content:center;gap:0 1.5rem;width:100%;
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--suave);
+  border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);padding:.85rem 0}
+.ficha b{color:var(--rojo);font-weight:400}
+nav{display:flex;flex-wrap:wrap;gap:1.25rem;justify-content:center;padding:1.25rem 0;
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+nav a{color:var(--suave);text-decoration:none;border-bottom:1px solid transparent}
+nav a:hover,nav a:focus{color:var(--tinta);border-bottom-color:var(--rojo)}
+nav.docs{border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);
+  margin-bottom:1rem}
+section{margin-top:4.5rem;scroll-margin-top:1rem}
+section>h2{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;
+  border-left:3px solid var(--rojo);padding-left:.9rem;margin:0 0 1.5rem}
+.cifras{display:grid;gap:1px;background:var(--linea);border:1px solid var(--linea);
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.cifra{background:var(--panel);padding:1.1rem}
+.cifra b{display:block;font-size:1.7rem;color:var(--oro);font-weight:400;
+  font-variant-numeric:tabular-nums;line-height:1.2}
+.cifra span{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--suave)}
+.hall{border-top:1px solid var(--linea);padding-top:1.75rem;margin-top:2.5rem}
+.hall:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.hall h3{margin:0 0 .75rem;font-size:1.15rem;color:var(--rojo)}
+.hall h4{color:var(--oro);margin:1.5rem 0 .5rem;font-size:.95rem}
+.hall p{margin:0 0 1rem}
+pre.asm{background:var(--panel);border-left:2px solid var(--verde);margin:1.25rem 0;
+  padding:1rem 1.1rem;overflow-x:auto;font-size:13px;line-height:1.6;color:var(--tinta)}
+.par{display:grid;gap:1.25rem;grid-template-columns:1fr}
+@media(min-width:820px){.par{grid-template-columns:1fr 1fr}}
+.par figure{margin:0}
+table{border-collapse:collapse;width:100%;margin:1.25rem 0;font-size:13px;display:block;
+  overflow-x:auto}
+th,td{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--linea)}
+th{color:var(--suave);font-weight:400;font-size:11px;letter-spacing:.07em;text-transform:uppercase}
+td.num{font-variant-numeric:tabular-nums;color:var(--oro)}
+.nivel{margin-top:2rem}
+.nivel h3{margin:0 0 .9rem;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase}
+.nivel em{color:var(--cyan);font-style:normal}
+.sep{color:var(--suave);margin:0 .6rem}
+.rejilla{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.rejilla figure{margin:0;background:var(--panel);box-shadow:0 0 0 1px var(--linea)}
+.rejilla figcaption{display:flex;justify-content:space-between;padding:.45rem .65rem;
+  font-size:11px;color:var(--suave);border-top:1px solid var(--linea)}
+.dir{font-variant-numeric:tabular-nums;color:var(--verde)}
+footer{margin-top:5rem;padding-top:1.5rem;border-top:1px solid var(--linea);
+  color:var(--suave);font-size:12px}
+
+/* Aviso de trabajo en curso: tiene que verse antes que las cifras, porque un
+   100% mal leido hace mas dano que no ponerlo. */
+.aviso{background:#3a2a10;border-left:3px solid var(--oro);margin:1.5rem auto;
+  padding:1rem 1.2rem;max-width:900px;border-radius:4px}
+.aviso p{margin:0;color:var(--tinta);font-size:15px;line-height:1.65}
+.galeria{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:1.5rem;margin:1.5rem 0}
+.galeria figure{margin:0}
+.galeria img{width:100%;height:auto;image-rendering:pixelated;
+  border:1px solid var(--linea);border-radius:3px}
+.galeria figcaption{color:var(--suave);font-size:13px;margin-top:.5rem}
+audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
+</style>
+<header class="top">
+  <img src="data:image/png;base64,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" alt="Exciting Jockey">
+  <p class="claim">Carreras de obst&aacute;culos con cuatro caballos: llevar uno con el l&aacute;tigo y el salto, o apostar entre uno y cuatro jugadores a las parejas que llegan primero y segundo. Las nueve carreras, las vallas, las r&iacute;as y las matas, las ca&iacute;das y el jinete despedido, las cuotas que salen de la fuerza de cada caballo; la pantalla desde los bytes de la ROM, cotejada con openMSX; las carreras en GIF y las siete m&uacute;sicas de su propio motor, id&eacute;nticas a openMSX cuadro a cuadro.</p>
+  <p class="ficha">Casio - <b>(c) 1984</b> - Cartucho de <b>16 KB</b> en 0x8000 - <b>MSX</b> - Volcado <b>5b17cb69...</b></p>
+</header>
+<p class="ficha" style="border:1px solid var(--oro);padding:.8em 1em;margin:1.5em 0">
+<b>Aqu&iacute; no hay capturas del juego.</b> El logotipo y la selecci&oacute;n salen de ejecutar la ROM (cotejadas con openMSX), y los GIF son la ROM <b>funcionando en openMSX</b>: en cada cuadro se apuntan la VRAM y los registros del VDP, y <b>c&oacute;digo nuestro los pinta</b>.</p>
+<nav><a href="LA-PARTIDA.html">La partida</a><a href="LAS-CARRERAS.html">Las carreras</a><a href="LAS-APUESTAS.html">Las apuestas</a><a href="LOS-TEXTOS.html">Los textos</a><a href="LA-MUSICA.html">La m&uacute;sica</a><span style="opacity:.35">|</span><a href="CURIOSIDADES.html">Curiosidades</a><span style="opacity:.35">|</span><a href="POR-DENTRO.html">Por dentro</a><a href="../" style="margin-left:auto;color:var(--oro)">In English</a></nav>
+<section id="numbers">
+  <h2>El cartucho en cifras</h2>
+  <div class="cifras"><div class="cifra"><b>100 %</b><span>del binario explicado</span></div><div class="cifra"><b>505</b><span>rutinas y etiquetas</span></div><div class="cifra"><b>42,4 %</b><span>del listado comentado</span></div><div class="cifra"><b>9.039</b><span>bytes de código</span></div><div class="cifra"><b>7.345</b><span>bytes de datos</span></div><div class="cifra"><b>0</b><span>bytes sin identificar</span></div></div>
+</section>
+<section id="pages"><h2>Lo que hay dentro</h2><div class="hall"><h3>El juego</h3><ul><li><a href="LA-PARTIDA.html">La partida</a>: los cinco modos, los mandos, el l&aacute;tigo y el salto del jinete, los caballos del ordenador y las nueve carreras, como los tiene el c&oacute;digo.</li><li><a href="LAS-CARRERAS.html">Las carreras</a>: las pantallas, las nueve carreras y sus obst&aacute;culos, jugadas en GIF: la salida, el salto, la ca&iacute;da, la mata y la meta.</li><li><a href="LAS-APUESTAS.html">Las apuestas</a>: las cuotas, c&oacute;mo se apuesta y c&oacute;mo se paga, en GIF.</li><li><a href="LOS-TEXTOS.html">Los textos</a>: todos los textos de la ROM, con su traducci&oacute;n.</li><li><a href="LA-MUSICA.html">La m&uacute;sica</a>: las siete m&uacute;sicas, de su propio motor de sonido y cotejadas con openMSX.</li></ul></div><div class="hall"><h3>Curiosidades</h3><ul><li><a href="CURIOSIDADES.html">Curiosidades</a>: datos escondidos entre los sprites, un juego que corre en la interrupci&oacute;n, el galope sin fin y el c&oacute;digo que nadie llama.</li></ul></div><div class="hall"><h3>Por dentro</h3><ul><li><a href="POR-DENTRO.html">Por dentro</a>: rehacer la ROM, la BIOS que usa, la interrupci&oacute;n, la m&aacute;quina de estados, la RAM y las herramientas.</li></ul></div></section>
+<footer><p>Esto es trabajo de documentación y preservación: el código y los gráficos siguen siendo de sus autores y de Casio, y la imagen del cartucho no se distribuye.</p></footer>

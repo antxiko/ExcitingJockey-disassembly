@@ -538,9 +538,9 @@ C 0x8AF1 suena?
 C 0x8AF5 32 cuadros
 C 0x8AFE la salida
 C 0x8B06 al paso 4
-L 0x8B0B carrera_sale              Paso 4: la musica de la carrera (0xBE7F, canal 0) y los caballos corren
+L 0x8B0B carrera_sale              Paso 4: el galope (0xBE7F, canal 0, sin fin) y los caballos corren
 C 0x8B0B la cuenta
-C 0x8B0F la musica de la carrera
+C 0x8B0F el galope
 C 0x8B17 a correr
 C 0x8B1A al paso 5
 L 0x8B1F carrera_corre             Paso 5: la carrera; en la demostracion, el boton 1 vuelve a la seleccion; al llegar los dos primeros, el pago
@@ -655,7 +655,7 @@ C 0x8DC5 la hierba...
 C 0x8DCD ...o la tierra
 C 0x8DD0 la lista de colores...
 C 0x8DD6 ...a los tres tercios desde la casilla 0xC1
-C 0x8DE6 los colores de las cosas sueltas: los de la hierba (0xBC8D)...
+C 0x8DE6 los colores de las matas: los de la hierba (0xBC8D)...
 C 0x8DEB ...o los de la tierra (0xBCF5)...
 C 0x8DF6 ...a las casillas 0x13-0x1A
 C 0x8E06 las letras sobre el suelo: negro sobre verde (0x13) o sobre rojo (0x19)...
@@ -731,11 +731,11 @@ C 0x9184 los 16 pasos...
 C 0x918D ...en la serie: la fila...
 C 0x9192 ...de 16 bytes
 C 0x919D el paso dentro de la fila
-L 0x91A6 obstaculo_pon             La columna sin obstaculo y, si lo hay (1 la meta, 2 una valla, 3 una ria, 4 las dos, 5 cosas sueltas), lo pinta
+L 0x91A6 obstaculo_pon             La columna sin obstaculo y, si lo hay (1 la meta, 2 una valla, 3 una ria, 4 las dos, 5 matas), lo pinta
 C 0x91A7 el suelo y el borde
 C 0x91AD el tipo...
 C 0x91AF ...por la tabla
-D 0x91B2 0x91BC tabla_obstaculos  Los cinco obstaculos: la meta, la valla, la ria, la ria y la valla, y las cosas sueltas
+D 0x91B2 0x91BC tabla_obstaculos  Los cinco obstaculos: la meta, la valla, la ria, la ria y la valla, y las matas
 F 0x91B2 w5
 L 0x91BC obstaculo_meta            La meta: GOAL en vertical, 3 casillas por 12 filas (0x91C9)
 D 0x91C9 0x91ED dibujo_meta  La meta: 12 filas de 3 casillas, con G, O, A y L
@@ -746,19 +746,19 @@ L 0x9208 obstaculo_ria             La ria: 5 casillas por 12 filas (0x9215)
 D 0x9215 0x9251 dibujo_ria  La ria: 12 filas de 5 casillas
 F 0x9215 5
 L 0x9251 obstaculo_ria_valla       La ria con la valla
-L 0x9258 obstaculo_sueltas         Dos cosas sueltas al azar en la pista (solo en las carreras pares)
+L 0x9258 obstaculo_matas           Dos matas al azar en la pista (solo en las carreras pares)
 C 0x9258 una carrera impar?
-L 0x9265 obstaculo_suelta          Una: el sitio (0x929D) y el dibujo (0x92AD) al azar
+L 0x9265 obstaculo_mata            Una: el sitio (0x929D) y el dibujo (0x92AD) al azar
 C 0x9265 uno de los ocho sitios...
 C 0x9275 ...uno de los cuatro dibujos
 C 0x9283 se pone? (0x9295)
-D 0x9295 0x92B5 sueltas  Los umbrales y si se pone (siempre), los ocho sitios de la columna y los cuatro dibujos de dos casillas (0x13-0x1A)
+D 0x9295 0x92B5 matas  Los umbrales y si se pone (siempre), los ocho sitios de la columna y los cuatro dibujos de dos casillas (0x13-0x1A)
 F 0x9295 4,4,w8,2
 L 0x92B5 copia_columna             Copia C filas de B bytes desde HL a DE, que es la columna de 5 de ancho
 L 0x92CA columna_limpia            La columna que entra: el suelo al azar y el borde
 D 0x92DD 0x933D tabla_arbustos  Los arbustos y carteles de los 192 pasos de la pista: un nibble por paso
 F 0x92DD 16
-D 0x933D 0x93ED tabla_obstaculos_filas  Las once filas de obstaculos de 16 pasos: 0 nada, 1 la meta, 2 la valla, 3 la ria, 4 las dos, 5 cosas sueltas
+D 0x933D 0x93ED tabla_obstaculos_filas  Las once filas de obstaculos de 16 pasos: 0 nada, 1 la meta, 2 la valla, 3 la ria, 4 las dos, 5 matas
 F 0x933D 16
 D 0x93ED 0x942D dibujos_arbustos  Los cuatro arbustos: 3 filas de 5 casillas (y una de relleno)
 F 0x93ED 16
@@ -910,9 +910,9 @@ C 0x9794 los numeros de 1ST y 2ND en blanco
 L 0x9798 caballo_corre             Estado 2: correr (paso 1) o prepararse para saltar (paso 2)
 D 0x979E 0x97A2 pasos_corre  Los dos pasos: correr y prepararse para saltar
 F 0x979E w2
-L 0x97A2 corre                     Paso 1: lo que pisa: la meta, las cosas sueltas, la valla o la ria; si no, salta si toca (el jugador con el boton 2, el ordenador si viene un obstaculo)
+L 0x97A2 corre                     Paso 1: lo que pisa: la meta, las matas, la valla o la ria; si no, salta si toca (el jugador con el boton 2, el ordenador si viene un obstaculo)
 C 0x97A2 bit 7: la meta
-C 0x97A9 bit 6: cosas sueltas, tropieza
+C 0x97A9 bit 6: una mata, tropieza
 C 0x97AD bit 5: la valla o la ria, cae
 C 0x97B1 es el del jugador?...
 C 0x97B8 ...ha pulsado el boton 2?
@@ -968,7 +968,7 @@ C 0x98B7 X + 12
 C 0x98BD Y - 8
 L 0x98C7 pisa_delante              Lo que tiene delante: Y - 16, por la tabla 0x9904
 L 0x98DA pisa_cae                  Donde cae del salto: Y - 18, por la tabla 0x991B
-D 0x98ED 0x9931 pisa_tablas  Lo que es cada casilla para las patas, delante y al caer del salto: bit 7 la meta, 6 cosas sueltas, 5 la valla o la ria, 4 lo mismo al caer, 3 un obstaculo delante
+D 0x98ED 0x9931 pisa_tablas  Lo que es cada casilla para las patas, delante y al caer del salto: bit 7 la meta, 6 matas, 5 la valla o la ria, 4 lo mismo al caer, 3 un obstaculo delante
 F 0x98ED 23
 L 0x9931 pisa_dos                  Las dos casillas (la de la columna y la de dos mas a la izquierda), sus bits juntos
 L 0x9942 pisa_casilla              La casilla de la pantalla en (L, H) y su lugar en la tabla: 0x13-0x1E o desde 0xD6
@@ -1043,7 +1043,7 @@ L 0x9B0A preparado                 Paso 2 del estado 2: el galope hasta el final
 C 0x9B10 el final del paso?
 C 0x9B18 la cuenta de la animacion a 0
 C 0x9B1D estado 4, paso 1: salta
-L 0x9B26 caballo_tropieza          Estado 3: tropieza con algo suelto (o vuelve del suelo)
+L 0x9B26 caballo_tropieza          Estado 3: tropieza con una mata (o vuelve del suelo)
 D 0x9B2C 0x9B30 pasos_tropieza  Los dos pasos: el golpe y el frenazo
 F 0x9B2C w2
 L 0x9B30 tropieza                  Paso 1: el sonido (si es el jugador o se apuesta), 24 cuadros y al paso 2
@@ -1051,7 +1051,7 @@ C 0x9B30 la apuesta: suena
 C 0x9B36 el jinete: solo el suyo
 L 0x9B3C tropieza_suena            El sonido del golpe (bit 5 de 0xE147)
 L 0x9B41 tropieza_cuenta           24 cuadros
-L 0x9B4A frenazo                   Paso 2: frenado 24 cuadros; luego, si pisa la valla o la ria cae, si pisa algo suelto se queda; si no, corre; el jugador puede saltar
+L 0x9B4A frenazo                   Paso 2: frenado 24 cuadros; luego, si pisa la valla o la ria cae, si pisa una mata se queda; si no, corre; el jugador puede saltar
 C 0x9B4A el jugador...
 C 0x9B51 ...pulsa el boton 2?
 L 0x9B55 frenazo_cuenta            Un cuadro menos: mientras, mas lento que la pista
@@ -1061,7 +1061,7 @@ L 0x9B65 frenazo_fin               Se acaba: lo que pisa
 C 0x9B6B la valla o la ria?
 C 0x9B6F nada?
 C 0x9B72 a correr
-L 0x9B7B frenazo_quieto            Sigue sobre algo suelto: quieto con la pista
+L 0x9B7B frenazo_quieto            Sigue sobre una mata: quieto con la pista
 L 0x9B86 frenazo_salta             Al paso 2 del estado 2: a saltar
 L 0x9B8F frenazo_cae               Al estado 5: cae
 L 0x9B98 caballo_salta             Estado 4: el salto (paso 1 sube, 2 en el aire, 3 baja)
@@ -1075,10 +1075,10 @@ C 0x9BB7 24 cuadros...
 C 0x9BBC ...en el paso 2
 L 0x9BC1 salto_suena               El sonido del salto (0xBEA1, canal 2) si el canal esta libre
 L 0x9BCF salto_aire                Paso 2: en el aire
-L 0x9BD8 salto_baja                Paso 3: hasta el final de la animacion; donde cae: sobre algo suelto tropieza, en la valla o la ria va al suelo; si no, corre
+L 0x9BD8 salto_baja                Paso 3: hasta el final de la animacion; donde cae: sobre una mata tropieza, en la valla o la ria va al suelo; si no, corre
 C 0x9BDE el final?
 C 0x9BE6 donde cae
-C 0x9BE9 algo suelto?
+C 0x9BE9 una mata?
 C 0x9BEE la valla o la ria?
 C 0x9BF3 bien: a correr
 L 0x9BFC salto_tropieza            Al estado 3: tropieza
@@ -1308,9 +1308,9 @@ L 0xA1B7 divide_fin                El cociente en HL
 # ======================================================================
 # LAS CUOTAS
 # ======================================================================
-L 0xA1B9 cuotas                    Las cuotas de las seis parejas: cuanto mas fuertes los dos caballos, menos pagan (de 2 a 99)
+L 0xA1B9 cuotas                    Las cuotas de las seis parejas, con los primeros numeros al azar de cada caballo (los mismos que van a su fuerza): cuanto mas altos, menos paga la pareja
 C 0xA1B9 hay que hacerlas?
-C 0xA1C1 la fuerza mas baja de los cuatro...
+C 0xA1C1 el numero mas bajo de los cuatro...
 L 0xA1CB cuotas_min                ...
 L 0xA1D1 cuotas_min_sig            ...
 C 0xA1D3 ...y la mas alta
@@ -1330,7 +1330,7 @@ C 0xA225 2-4
 C 0xA22F 3-4
 C 0xA239 la suma de las seis
 C 0xA243 seis cuotas
-L 0xA245 cuota_calcula             Una: la suma x el factor entre lo de la pareja
+L 0xA245 cuota_calcula             Una: el peso de la pareja x el factor, entre la suma de los seis pesos
 C 0xA24A el factor...
 C 0xA24D ...por lo de la pareja
 C 0xA256 entre la suma, restando
@@ -1338,21 +1338,21 @@ L 0xA25F cuotas_resta              Una resta mas
 L 0xA26E cuotas_cociente           El cociente
 C 0xA272 al menos 2
 L 0xA278 cuotas_pon                La cuota
-C 0xA27D las seis a BCD
-L 0xA282 cuotas_bcd                Una: las decenas...
+C 0xA27D a BCD; pero B sale a 0 del djnz de antes: el bucle da 256 vueltas, de 0xF0B7 a 0xF1B6 (lo de despues se vuelve a poner luego)
+L 0xA282 cuotas_bcd                Un byte a BCD, DOS veces: la primera pasada da el BCD y la segunda lo toma por binario y lo vuelve a pasar (12 queda en 0x18)
 L 0xA285 cuotas_bcd_10             ...de 10 en 10
 L 0xA28C cuotas_bcd_pon            Las decenas arriba, las unidades abajo
-L 0xA295 cuotas_bcd_100            Lo que pasa de 100...
+L 0xA295 cuotas_bcd_100            La segunda pasada: el BCD de antes, de 10 en 10
 L 0xA29C cuotas_bcd_99             ...no mas de 99
 L 0xA2AD cuotas_bcd_sig            La siguiente
 C 0xA2B1 las seis cuotas, al marcador (0xE011)
 L 0xA2BD multiplica                HL = DE x A (8 bits); lo que pasa de 16 bits, en 0xF0B6
 L 0xA2C7 multiplica_bit            Un bit de A
 L 0xA2D4 multiplica_sig            El siguiente
-L 0xA2D9 cuotas_pareja             Lo de una pareja: 31 - (las fuerzas bajas de los dos) por el factor, a (DE), y la suma en BC
-C 0xA2DB las dos fuerzas...
+L 0xA2D9 cuotas_pareja             El peso de una pareja: (31 - los primeros numeros al azar de los dos caballos) al cuadrado, a (DE), y la suma en BC
+C 0xA2DB los dos numeros...
 C 0xA2DC ...contra 31
-D 0xA2EF 0xA2F5 cuotas_factores  El factor de las cuotas segun lo que separa al mas fuerte del mas flojo
+D 0xA2EF 0xA2F5 cuotas_factores  El factor de las cuotas segun lo que separa el numero mas alto del mas bajo (de 10 a 15; menos de 10, 0x1F)
 F 0xA2EF 6
 # ======================================================================
 # EL PAGO (en el bucle principal)
@@ -1467,13 +1467,13 @@ L 0xA659 dinero_pinta              El dinero de los cuatro jugadores en el marca
 C 0xA659 sus sitios en la pantalla
 C 0xA65D el dinero
 L 0xA663 dinero_uno                Uno
-L 0xA674 dinero_pon                El dinero de (IY): dos bytes BCD, cuatro cifras; los ceros de la izquierda en blanco; y un 0 detras
+L 0xA674 dinero_pon                El dinero de (IY): dos bytes BCD, cuatro cifras; los ceros de la izquierda en blanco; y dos ceros detras (un punto son 100)
 C 0xA676 el byte alto
 C 0xA679 aun no ha salido una cifra
 L 0xA686 dinero_byte               Un byte: las dos cifras
 C 0xA68C el byte bajo
 C 0xA691 todo ceros: el ultimo en blanco...
-L 0xA699 dinero_cero               ...y el 0 de detras
+L 0xA699 dinero_cero               ...y los dos ceros de detras
 L 0xA6A3 dinero_alta               La cifra alta: un 0 a la izquierda, en blanco (0xDF)
 L 0xA6B1 dinero_cifra              La cifra: casilla 0x60 + n
 L 0xA6B9 dinero_cifra_pon          A la pantalla
@@ -1622,13 +1622,13 @@ D 0xADBC 0xB3DB sprites  Los dibujos de sprite 13-61: los caballos (tres sprites
 F 0xADBC 16
 D 0xB3DB 0xB435 caballo_dibujos  Los diez dibujos del caballo: para cada uno de sus tres sprites, el dibujo, la Y y la X (9 bytes)
 F 0xB3DB 9
-D 0xB435 0xB835 casillas  Las casillas 0x00-0x7F: los arbustos, las cosas sueltas (0x13-0x1A), el agua de la ria (0x1B-0x1E), los bordes del recuadro, las letras en ASCII (0x30-0x5F) y las letras grandes del titulo (0x60-0x7F)
+D 0xB435 0xB835 casillas  Las casillas 0x00-0x7F: los arbustos, las matas (0x13-0x1A), el agua de la ria (0x1B-0x1E), los bordes del recuadro, las letras en ASCII (0x30-0x5F) y las letras grandes del titulo (0x60-0x7F)
 F 0xB435 8
 D 0xB835 0xBBF5 casillas_altas  Las casillas 0x80-0xF7: las cifras pequenas y grandes, 1UP-4UP, MIN, MAX, ODDS, las parejas, RACE, GRASS, DIRT, las distancias, el ovalo, el cartel de CASIO, la valla de abajo, los postes y la meta; la copia de 1 KB sigue por los colores
 F 0xB835 8
-D 0xBBF5 0xBCF5 colores  Los colores de las casillas 0x00-0x1F (8 bytes cada una); en 0xBC8D, los de las cosas sueltas en la hierba
+D 0xBBF5 0xBCF5 colores  Los colores de las casillas 0x00-0x1F (8 bytes cada una); en 0xBC8D, los de las matas en la hierba
 F 0xBBF5 8
-D 0xBCF5 0xBD35 colores_tierra_sueltas  Los colores de las cosas sueltas (0x13-0x1A) en la tierra
+D 0xBCF5 0xBD35 colores_tierra_matas  Los colores de las matas (0x13-0x1A) en la tierra
 F 0xBCF5 8
 D 0xBD35 0xBD89 titulo  El titulo de la seleccion: CASIO y 大障害競馬 en letras grandes, 14 x 6 casillas
 F 0xBD35 14
@@ -1646,9 +1646,9 @@ D 0xBE56 0xBE6C musica_game_over_a  GAME OVER, canal 0; grupos de tres bytes (no
 F 0xBE56 3
 D 0xBE6C 0xBE7F musica_game_over_b  GAME OVER, canal 1; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
 F 0xBE6C 3
-D 0xBE7F 0xBE8E musica_carrera  La carrera, canal 0: sus cinco primeras notas y la salida (0xBE8E); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+D 0xBE7F 0xBE8E galope  El galope de los caballos, canal 0: tres golpes de ruido y 0xFD vuelve al principio, sin fin; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
 F 0xBE7F 3
-D 0xBE8E 0xBEA1 sonido_salida  La salida (canal 2): el final de la musica de la carrera; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+D 0xBE8E 0xBEA1 sonido_salida  La salida (canal 2), con ruido; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
 F 0xBE8E 3
 D 0xBEA1 0xBEC9 sonido_salto  El salto (canal 2); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
 F 0xBEA1 3
@@ -1662,7 +1662,7 @@ D 0xBF32 0xBF54 musica_premio_a  El premio del jinete (primero o segundo), canal
 F 0xBF32 3
 D 0xBF54 0xBF76 musica_premio_b  El premio del jinete, canal 2; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
 F 0xBF54 3
-D 0xBF76 0xBF7D sonido_golpe  El golpe con algo suelto (canal 1); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
+D 0xBF76 0xBF7D sonido_golpe  El golpe con una mata (canal 1); grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
 F 0xBF76 3
 D 0xBF7D 0xBF8A musica_llegada_a  La llegada, canal 0; grupos de tres bytes (nota, duracion, espera) u ordenes (0xF4-0xFF)
 F 0xBF7D 3
@@ -2399,7 +2399,7 @@ C 0x8641 ...a la mitad (rrca)
 C 0x8646 la nueva semilla
 C 0xA2D9 la suma
 C 0xA2DE E = 31 - las dos
-C 0xA2E1 por el factor
+C 0xA2E1 al cuadrado (A = E)
 C 0xA2E5 DE = el sitio
 C 0xA2E6 lo de la pareja
 C 0xA2EB a la suma

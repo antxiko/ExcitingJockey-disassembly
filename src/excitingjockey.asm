@@ -1504,10 +1504,10 @@ carrera_fanfarria:		; Paso 3: cuando acaba la fanfarria, 32 cuadros y el sonido 
 	call pieza		;8b03
 	ld (ix+001h),004h		;8b06   ; al paso 4
 	ret			;8b0a
-carrera_sale:		; Paso 4: la musica de la carrera (0xBE7F, canal 0) y los caballos corren
+carrera_sale:		; Paso 4: el galope (0xBE7F, canal 0, sin fin) y los caballos corren
 	call cuenta_baja		;8b0b   ; la cuenta
 	ret nz			;8b0e
-	ld b,000h		;8b0f   ; la musica de la carrera
+	ld b,000h		;8b0f   ; el galope
 	ld de,0be7fh		;8b11
 	call pieza		;8b14
 	call caballos_corren		;8b17   ; a correr
@@ -1900,7 +1900,7 @@ L_8DD0:
 	pop af			;8de2
 	push af			;8de3
 	and 080h		;8de4
-	ld hl,0bc8dh		;8de6   ; los colores de las cosas sueltas: los de la hierba (0xBC8D)...
+	ld hl,0bc8dh		;8de6   ; los colores de las matas: los de la hierba (0xBC8D)...
 	jr nz,L_8DEE		;8de9
 	ld hl,0bcf5h		;8deb   ; ...o los de la tierra (0xBCF5)...
 L_8DEE:
@@ -2397,7 +2397,7 @@ obstaculo:		; El obstaculo del paso A: la fila de la serie (0xE072) que toca a l
 	add hl,bc			;91a3
 	ld a,(hl)			;91a4   ; el obstaculo
 	ret			;91a5
-obstaculo_pon:		; La columna sin obstaculo y, si lo hay (1 la meta, 2 una valla, 3 una ria, 4 las dos, 5 cosas sueltas), lo pinta
+obstaculo_pon:		; La columna sin obstaculo y, si lo hay (1 la meta, 2 una valla, 3 una ria, 4 las dos, 5 matas), lo pinta
 	push af			;91a6
 	call columna_limpia		;91a7   ; el suelo y el borde
 	pop af			;91aa
@@ -2408,7 +2408,7 @@ obstaculo_pon:		; La columna sin obstaculo y, si lo hay (1 la meta, 2 una valla,
 
 ; ----------------------------------------------------------------------
 ; DATOS tabla_obstaculos: Los cinco obstaculos: la meta, la valla, la ria, la
-;   ria y la valla, y las cosas sueltas
+;   ria y la valla, y las matas
 ;   0x91b2..0x91bc  (10 bytes)
 DATA_tabla_obstaculos:
 	defw 091bch,091edh,09208h,09251h,09258h	; 91b2
@@ -2498,14 +2498,14 @@ obstaculo_ria_valla:		; La ria con la valla
 	call obstaculo_ria		;9251
 	call obstaculo_valla		;9254
 	ret			;9257
-obstaculo_sueltas:		; Dos cosas sueltas al azar en la pista (solo en las carreras pares)
+obstaculo_matas:		; Dos matas al azar en la pista (solo en las carreras pares)
 	ld a,(0e000h)		;9258   ; una carrera impar?
 	bit 0,a		;925b
 	ret nz			;925d
-	call obstaculo_suelta		;925e
-	call obstaculo_suelta		;9261
+	call obstaculo_mata		;925e
+	call obstaculo_mata		;9261
 	ret			;9264
-obstaculo_suelta:		; Una: el sitio (0x929D) y el dibujo (0x92AD) al azar
+obstaculo_mata:		; Una: el sitio (0x929D) y el dibujo (0x92AD) al azar
 	call azar		;9265   ; uno de los ocho sitios...
 	and 007h		;9268   ; uno de ocho
 	add a,a			;926a
@@ -2535,10 +2535,10 @@ obstaculo_suelta:		; Una: el sitio (0x929D) y el dibujo (0x92AD) al azar
 	ret			;9294
 
 ; ----------------------------------------------------------------------
-; DATOS sueltas: Los umbrales y si se pone (siempre), los ocho sitios de la
+; DATOS matas: Los umbrales y si se pone (siempre), los ocho sitios de la
 ;   columna y los cuatro dibujos de dos casillas (0x13-0x1A)
 ;   0x9295..0x92b5  (32 bytes)
-DATA_sueltas:
+DATA_matas:
 	defb 000h,030h,060h,080h	; 9295
 	defb 001h,001h,001h,001h	; 9299
 	defw 0ef94h,0ef9ch,0efa4h,0efafh,0efb7h,0efbfh,0efc2h,0efc9h	; 929d
@@ -2592,7 +2592,7 @@ DATA_tabla_arbustos:
 
 ; ----------------------------------------------------------------------
 ; DATOS tabla_obstaculos_filas: Las once filas de obstaculos de 16 pasos: 0
-;   nada, 1 la meta, 2 la valla, 3 la ria, 4 las dos, 5 cosas sueltas
+;   nada, 1 la meta, 2 la valla, 3 la ria, 4 las dos, 5 matas
 ;   0x933d..0x93ed  (176 bytes)
 DATA_tabla_obstaculos_filas:
 	defb 000h,005h,000h,000h,005h,000h,000h,000h,000h,000h,005h,000h,000h,005h,000h,000h	; 933d  ................
@@ -3130,11 +3130,11 @@ DATA_pasos_corre:
 ; ======================================================================
 
 
-corre:		; Paso 1: lo que pisa: la meta, las cosas sueltas, la valla o la ria; si no, salta si toca (el jugador con el boton 2, el ordenador si viene un obstaculo)
+corre:		; Paso 1: lo que pisa: la meta, las matas, la valla o la ria; si no, salta si toca (el jugador con el boton 2, el ordenador si viene un obstaculo)
 	call pisa		;97a2   ; bit 7: la meta
 	add a,a			;97a5
 	jp c,caballo_meta		;97a6
-	add a,a			;97a9   ; bit 6: cosas sueltas, tropieza
+	add a,a			;97a9   ; bit 6: una mata, tropieza
 	jp c,a_tropieza		;97aa
 	add a,a			;97ad   ; bit 5: la valla o la ria, cae
 	jp c,a_cae		;97ae
@@ -3325,8 +3325,8 @@ pisa_cae:		; Donde cae del salto: Y - 18, por la tabla 0x991B
 
 ; ----------------------------------------------------------------------
 ; DATOS pisa_tablas: Lo que es cada casilla para las patas, delante y al caer
-;   del salto: bit 7 la meta, 6 cosas sueltas, 5 la valla o la ria, 4 lo mismo
-;   al caer, 3 un obstaculo delante
+;   del salto: bit 7 la meta, 6 matas, 5 la valla o la ria, 4 lo mismo al
+;   caer, 3 un obstaculo delante
 ;   0x98ed..0x9931  (68 bytes)
 DATA_pisa_tablas:
 	defb 040h,040h,040h,040h,040h,040h,040h,040h,020h,020h,020h,020h,000h,000h,000h,000h,020h,020h,020h,020h,000h,080h,020h	; 98ed  @@@@@@@@    ....    .. 
@@ -3624,7 +3624,7 @@ preparado:		; Paso 2 del estado 2: el galope hasta el final del paso y a saltar 
 	ld (ix+001h),001h		;9b1d   ; estado 4, paso 1: salta
 	ld (ix+000h),004h		;9b21
 	ret			;9b25
-caballo_tropieza:		; Estado 3: tropieza con algo suelto (o vuelve del suelo)
+caballo_tropieza:		; Estado 3: tropieza con una mata (o vuelve del suelo)
 	ld a,(ix+001h)		;9b26
 	call salta_tabla		;9b29
 
@@ -3652,7 +3652,7 @@ tropieza_cuenta:		; 24 cuadros
 	ld (ix+01ah),018h		;9b41
 	ld (ix+001h),002h		;9b45
 	ret			;9b49
-frenazo:		; Paso 2: frenado 24 cuadros; luego, si pisa la valla o la ria cae, si pisa algo suelto se queda; si no, corre; el jugador puede saltar
+frenazo:		; Paso 2: frenado 24 cuadros; luego, si pisa la valla o la ria cae, si pisa una mata se queda; si no, corre; el jugador puede saltar
 	ld a,(ix+019h)		;9b4a   ; el jugador...
 	bit 0,a		;9b4d
 	jr z,frenazo_cuenta		;9b4f
@@ -3674,7 +3674,7 @@ frenazo_fin:		; Se acaba: lo que pisa
 	ld (ix+001h),001h		;9b72   ; a correr
 	ld (ix+000h),002h		;9b76
 	ret			;9b7a
-frenazo_quieto:		; Sigue sobre algo suelto: quieto con la pista
+frenazo_quieto:		; Sigue sobre una mata: quieto con la pista
 	ld (ix+00fh),000h		;9b7b
 	ld (ix+00dh),000h		;9b7f
 	jp corre_mueve		;9b83
@@ -3727,7 +3727,7 @@ salto_aire:		; Paso 2: en el aire
 	ret nz			;9bd2
 	ld (ix+001h),003h		;9bd3
 	ret			;9bd7
-salto_baja:		; Paso 3: hasta el final de la animacion; donde cae: sobre algo suelto tropieza, en la valla o la ria va al suelo; si no, corre
+salto_baja:		; Paso 3: hasta el final de la animacion; donde cae: sobre una mata tropieza, en la valla o la ria va al suelo; si no, corre
 	ld de,09a28h		;9bd8
 	call animacion		;9bdb
 	ld a,(ix+00bh)		;9bde   ; el final?
@@ -3735,7 +3735,7 @@ salto_baja:		; Paso 3: hasta el final de la animacion; donde cae: sobre algo sue
 	cp 01fh		;9be3
 	ret nz			;9be5
 	call pisa_cae		;9be6   ; donde cae
-	bit 6,a		;9be9   ; algo suelto?
+	bit 6,a		;9be9   ; una mata?
 	jp nz,salto_tropieza		;9beb
 	bit 4,a		;9bee   ; la valla o la ria?
 	jp nz,salto_suelo		;9bf0
@@ -4716,12 +4716,12 @@ divide_baja:		; No cabe: el siguiente bit
 divide_fin:		; El cociente en HL
 	exx			;a1b7
 	ret			;a1b8
-cuotas:		; Las cuotas de las seis parejas: cuanto mas fuertes los dos caballos, menos pagan (de 2 a 99)
+cuotas:		; Las cuotas de las seis parejas, con los primeros numeros al azar de cada caballo (los mismos que van a su fuerza): cuanto mas altos, menos paga la pareja
 	ld hl,0f0b0h		;a1b9   ; hay que hacerlas?
 	bit 7,(hl)		;a1bc
 	ret z			;a1be
 	res 7,(hl)		;a1bf
-	ld hl,0e03fh		;a1c1   ; la fuerza mas baja de los cuatro...
+	ld hl,0e03fh		;a1c1   ; el numero mas bajo de los cuatro...
 	ld de,00004h		;a1c4
 	ld b,003h		;a1c7
 	ld a,(hl)			;a1c9
@@ -4789,7 +4789,7 @@ cuotas_factor:		; El factor (0xF0C7)
 	ld hl,0f0b7h		;a23d   ; lo de cada pareja...
 	ld de,0f0b7h		;a240   ; ...y alli las cuotas
 	ld b,006h		;a243   ; seis cuotas
-cuota_calcula:		; Una: la suma x el factor entre lo de la pareja
+cuota_calcula:		; Una: el peso de la pareja x el factor, entre la suma de los seis pesos
 	push de			;a245
 	xor a			;a246   ; sin parte alta
 	ld (0f0b6h),a		;a247
@@ -4830,9 +4830,9 @@ cuotas_pon:		; La cuota
 	ld (de),a			;a279   ; la cuota
 	inc de			;a27a
 	djnz cuota_calcula		;a27b   ; las seis
-	ld hl,0f0b7h		;a27d   ; las seis a BCD
+	ld hl,0f0b7h		;a27d   ; a BCD; pero B sale a 0 del djnz de antes: el bucle da 256 vueltas, de 0xF0B7 a 0xF1B6 (lo de despues se vuelve a poner luego)
 	ld e,00ah		;a280   ; de 10 en 10
-cuotas_bcd:		; Una: las decenas...
+cuotas_bcd:		; Un byte a BCD, DOS veces: la primera pasada da el BCD y la segunda lo toma por binario y lo vuelve a pasar (12 queda en 0x18)
 	ld a,(hl)			;a282   ; la cuota
 	ld d,000h		;a283   ; las decenas
 cuotas_bcd_10:		; ...de 10 en 10
@@ -4850,7 +4850,7 @@ cuotas_bcd_pon:		; Las decenas arriba, las unidades abajo
 	add a,a			;a291
 	or c			;a292   ; ...con las unidades
 	ld c,000h		;a293   ; las centenas de lo que se ha juntado
-cuotas_bcd_100:		; Lo que pasa de 100...
+cuotas_bcd_100:		; La segunda pasada: el BCD de antes, de 10 en 10
 	sub 00ah		;a295   ; menos 10
 	jr c,cuotas_bcd_99		;a297
 	inc c			;a299   ; una mas
@@ -4897,14 +4897,14 @@ multiplica_sig:		; El siguiente
 	ret z			;a2d5
 	add hl,hl			;a2d6
 	jr multiplica_bit		;a2d7
-cuotas_pareja:		; Lo de una pareja: 31 - (las fuerzas bajas de los dos) por el factor, a (DE), y la suma en BC
+cuotas_pareja:		; El peso de una pareja: (31 - los primeros numeros al azar de los dos caballos) al cuadrado, a (DE), y la suma en BC
 	push bc			;a2d9   ; la suma
 	push de			;a2da
-	add a,l			;a2db   ; las dos fuerzas...
+	add a,l			;a2db   ; los dos numeros...
 	xor 01fh		;a2dc   ; ...contra 31
 	ld e,a			;a2de   ; E = 31 - las dos
 	ld d,000h		;a2df
-	call multiplica		;a2e1   ; por el factor
+	call multiplica		;a2e1   ; al cuadrado (A = E)
 	pop de			;a2e4
 	ex de,hl			;a2e5   ; DE = el sitio
 	call palabra_pon		;a2e6   ; lo de la pareja
@@ -4916,8 +4916,8 @@ cuotas_pareja:		; Lo de una pareja: 31 - (las fuerzas bajas de los dos) por el f
 	ret			;a2ee
 
 ; ----------------------------------------------------------------------
-; DATOS cuotas_factores: El factor de las cuotas segun lo que separa al mas
-;   fuerte del mas flojo
+; DATOS cuotas_factores: El factor de las cuotas segun lo que separa el numero
+;   mas alto del mas bajo (de 10 a 15; menos de 10, 0x1F)
 ;   0xa2ef..0xa2f5  (6 bytes)
 DATA_cuotas_factores:
 	defb 02fh,03fh,04fh,05fh,06fh,07fh	; a2ef
@@ -5456,7 +5456,7 @@ dinero_uno:		; Uno
 	pop bc			;a670
 	djnz dinero_uno		;a671
 	ret			;a673
-dinero_pon:		; El dinero de (IY): dos bytes BCD, cuatro cifras; los ceros de la izquierda en blanco; y un 0 detras
+dinero_pon:		; El dinero de (IY): dos bytes BCD, cuatro cifras; los ceros de la izquierda en blanco; y dos ceros detras (un punto son 100)
 	ld b,002h		;a674
 	ld c,(iy+001h)		;a676   ; el byte alto
 	ld a,(0a6d6h)		;a679   ; aun no ha salido una cifra
@@ -5473,7 +5473,7 @@ dinero_byte:		; Un byte: las dos cifras
 	ld a,060h		;a693
 	jr z,dinero_cero		;a695
 	ld a,0dfh		;a697
-dinero_cero:		; ...y el 0 de detras
+dinero_cero:		; ...y los dos ceros de detras
 	ex de,hl			;a699
 	call vram_pon		;a69a
 	inc hl			;a69d
@@ -6392,9 +6392,9 @@ DATA_caballo_dibujos:
 	defb 0ech,0f8h,0edh,0f0h,0fdh,0f5h,0f4h,0fdh,005h	; b42c  .........
 
 ; ----------------------------------------------------------------------
-; DATOS casillas: Las casillas 0x00-0x7F: los arbustos, las cosas sueltas
-;   (0x13-0x1A), el agua de la ria (0x1B-0x1E), los bordes del recuadro, las
-;   letras en ASCII (0x30-0x5F) y las letras grandes del titulo (0x60-0x7F)
+; DATOS casillas: Las casillas 0x00-0x7F: los arbustos, las matas (0x13-0x1A),
+;   el agua de la ria (0x1B-0x1E), los bordes del recuadro, las letras en
+;   ASCII (0x30-0x5F) y las letras grandes del titulo (0x60-0x7F)
 ;   0xb435..0xb835  (1024 bytes)
 DATA_casillas:
 	defb 000h,000h,000h,000h,000h,000h,000h,000h	; b435  ........
@@ -6656,7 +6656,7 @@ DATA_casillas_altas:
 
 ; ----------------------------------------------------------------------
 ; DATOS colores: Los colores de las casillas 0x00-0x1F (8 bytes cada una); en
-;   0xBC8D, los de las cosas sueltas en la hierba
+;   0xBC8D, los de las matas en la hierba
 ;   0xbbf5..0xbcf5  (256 bytes)
 DATA_colores:
 	defb 033h,033h,033h,033h,033h,033h,033h,033h	; bbf5  33333333
@@ -6693,10 +6693,10 @@ DATA_colores:
 	defb 016h,016h,016h,016h,016h,014h,014h,014h	; bced  ........
 
 ; ----------------------------------------------------------------------
-; DATOS colores_tierra_sueltas: Los colores de las cosas sueltas (0x13-0x1A)
-;   en la tierra
+; DATOS colores_tierra_matas: Los colores de las matas (0x13-0x1A) en la
+;   tierra
 ;   0xbcf5..0xbd35  (64 bytes)
-DATA_colores_tierra_sueltas:
+DATA_colores_tierra_matas:
 	defb 0c9h,079h,079h,047h,047h,079h,049h,0c9h	; bcf5  .yyGGyI.
 	defb 0c9h,0c9h,079h,079h,047h,047h,049h,0c9h	; bcfd  ..yyGGI.
 	defb 0c9h,0c9h,079h,079h,047h,049h,049h,0c9h	; bd05  ..yyGII.
@@ -6847,11 +6847,11 @@ DATA_musica_game_over_b:
 	defb 0ffh	; be7e
 
 ; ----------------------------------------------------------------------
-; DATOS musica_carrera: La carrera, canal 0: sus cinco primeras notas y la
-;   salida (0xBE8E); grupos de tres bytes (nota, duracion, espera) u ordenes
-;   (0xF4-0xFF)
+; DATOS galope: El galope de los caballos, canal 0: tres golpes de ruido y
+;   0xFD vuelve al principio, sin fin; grupos de tres bytes (nota, duracion,
+;   espera) u ordenes (0xF4-0xFF)
 ;   0xbe7f..0xbe8e  (15 bytes)
-DATA_musica_carrera:
+DATA_galope:
 	defb 0fah,000h,00eh	; be7f
 	defb 00ch,001h,00ch	; be82
 	defb 013h,001h,006h	; be85
@@ -6859,9 +6859,8 @@ DATA_musica_carrera:
 	defb 0fdh,000h,000h	; be8b
 
 ; ----------------------------------------------------------------------
-; DATOS sonido_salida: La salida (canal 2): el final de la musica de la
-;   carrera; grupos de tres bytes (nota, duracion, espera) u ordenes
-;   (0xF4-0xFF)
+; DATOS sonido_salida: La salida (canal 2), con ruido; grupos de tres bytes
+;   (nota, duracion, espera) u ordenes (0xF4-0xFF)
 ;   0xbe8e..0xbea1  (19 bytes)
 DATA_sonido_salida:
 	defb 0f6h,000h,000h	; be8e
@@ -6984,7 +6983,7 @@ DATA_musica_premio_b:
 	defb 0ffh	; bf75
 
 ; ----------------------------------------------------------------------
-; DATOS sonido_golpe: El golpe con algo suelto (canal 1); grupos de tres bytes
+; DATOS sonido_golpe: El golpe con una mata (canal 1); grupos de tres bytes
 ;   (nota, duracion, espera) u ordenes (0xF4-0xFF)
 ;   0xbf76..0xbf7d  (7 bytes)
 DATA_sonido_golpe:

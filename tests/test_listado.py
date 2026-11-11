@@ -156,6 +156,21 @@ class Sonido(unittest.TestCase):
         self.assertTrue(all(x > y for x, y in zip(t, t[1:])))
 
 
+class LasCuotas(unittest.TestCase):
+    def test_el_bucle_bcd_empieza_con_b_a_cero(self):
+        """El djnz de 0xA27B deja B a 0 y el bucle de 0xA282 no lo vuelve a cargar: 256 vueltas."""
+        self.assertEqual(instruccion(0xA27B), "djnz cuota_calcula")
+        self.assertEqual(instruccion(0xA2AF), "djnz cuotas_bcd")
+        with open(ASM, encoding="utf-8") as f:
+            entre = [ln for ln in f if re.match(r"^\t.*;a(2[89a][0-9a-f]|27[d-f])\b", ln)]
+        self.assertTrue(entre)
+        self.assertFalse([ln for ln in entre if re.match(r"^\tld b,", ln)])
+
+    def test_la_segunda_pasada_a_bcd(self):
+        self.assertEqual([instruccion(a) for a in (0xA293, 0xA295, 0xA297)],
+                         ["ld c,000h", "sub 00ah", "jr c,cuotas_bcd_99"])
+
+
 class LoQueNadieUsa(unittest.TestCase):
     def test_la_rutina_de_0xa150_no_la_llama_nadie(self):
         rom = lee()
