@@ -32,6 +32,20 @@ the track's.
 In the oval at the top right, **four dots** go round with the horses (`plano`, 0xA6E3): the
 two straights and the two bends are tables of coordinates (0xA7BC).
 
+## The nine whole tracks
+
+The nine races from the start (on the right) to the finish (on the left), as they are seen scrolling, at half size:
+1,200 to 3,600 metres, 240 to 720 columns plus the 32 of the start. They are **drawn by running the ROM**
+(`tools/pistas.py`): `pista_monta` (0x8D7D) builds the start and then, over and over, the part of `pista_corre` that
+moves the track one tile (0x911A) and every five columns puts in the next step, up to the last one (0xBB). The
+**ground** is thrown at random by the game with the R register (`suelo_azar`, 0x901C): the one in the picture is from
+this run, like that of any race; the bushes, the signs, the bottom fence and the obstacles are each race's own.
+
+Check against the recorded demo (race 9, from the start): the rows of bushes and signs and the fence row come out
+**identical** to the game's track RAM; the ground rows do not, because they are random.
+
+![The nine tracks](imagenes/pistas.png)
+
 ## The start
 
 ![The start of race 1 in the jockey mode](imagenes/salida.gif)

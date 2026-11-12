@@ -32,6 +32,21 @@ y la de la pista.
 En el óvalo de arriba a la derecha, **cuatro puntos** dan la vuelta con los caballos
 (`plano`, 0xA6E3): las dos rectas y las dos curvas son tablas de coordenadas (0xA7BC).
 
+## Las nueve pistas enteras
+
+Las nueve carreras de la salida (a la derecha) a la meta (a la izquierda), como se ven correr, a la mitad de tamaño:
+de 1.200 a 3.600 metros, 240 a 720 columnas más las 32 de la salida. Están **pintadas ejecutando la ROM**
+(`tools/pistas.py`): `pista_monta` (0x8D7D) monta la salida y después, una y otra vez, la parte de `pista_corre`
+que corre la pista una casilla (0x911A) y mete cada cinco columnas el paso siguiente, hasta el último (0xBB). El
+**suelo** lo echa el juego al azar con el registro R (`suelo_azar`, 0x901C): el de la imagen es el de esta ejecución,
+como el de una carrera cualquiera; los arbustos, los carteles, la valla de abajo y los obstáculos son los de cada
+carrera.
+
+Cotejo con la demostración grabada (la carrera 9, desde la salida): las filas de los arbustos y los carteles y la de
+la valla salen **iguales** a la RAM de la pista del juego; las del suelo no, porque son al azar.
+
+![Las nueve pistas](../imagenes/pistas.png)
+
 ## La salida
 
 ![La salida de la carrera 1 en el modo del jinete](../imagenes/salida.gif)
