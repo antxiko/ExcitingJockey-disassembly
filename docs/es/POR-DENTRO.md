@@ -14,7 +14,7 @@ la raíz como `excitingjockey.rom` (el volcado de GoodMSX, `[!]`, sha1 `5b17cb69
 | datos con nombre | 7.345 |
 | sin explicar | 0 |
 
-El listado tiene 1.918 comentarios en 4.521 instrucciones (42,4 %), 505 rutinas y etiquetas,
+El listado tiene 1.919 comentarios en 4.521 instrucciones (42,4 %), 505 rutinas y etiquetas,
 ninguna por debajo del 10 % comentado, y ninguna rutina llamada sin nombre.
 
 ## El cartucho

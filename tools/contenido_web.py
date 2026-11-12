@@ -20,7 +20,7 @@ CODIGO = 9039
 DATOS = 7345
 RUTINAS = 505
 INSTRUCCIONES = 4521
-COMENTARIOS = 1918
+COMENTARIOS = 1919
 
 
 def densidad(idioma):
@@ -105,7 +105,11 @@ PAGINAS = [
       "data hidden among the sprites, a game run from the interrupt, the endless gallop and the "
       "code nobody calls",
       "datos escondidos entre los sprites, un juego que corre en la interrupci&oacute;n, el "
-      "galope sin fin y el c&oacute;digo que nadie llama")],
+      "galope sin fin y el c&oacute;digo que nadie llama"),
+     ("SECRETS-AND-BUGS.html", "SECRETOS-Y-FALLOS.html", "Secrets and bugs", "Secretos y fallos",
+      "what was searched for: no hidden keys, the money that goes back to zero past 999,900 and the whip queue",
+      "lo que se ha buscado: ninguna tecla escondida, el dinero que vuelve a cero pasados los 999.900 y la cola del "
+      "l&aacute;tigo")],
     [("UNDER-THE-HOOD.html", "POR-DENTRO.html", "Under the hood", "Por dentro",
       "rebuilding the ROM, the BIOS it uses, the interrupt, the state machine, the RAM and the "
       "tools",

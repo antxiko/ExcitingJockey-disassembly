@@ -391,11 +391,11 @@ L 0x87BF recuadro_borra            Las cuatro filas del recuadro de arriba (0x18
 L 0x87D8 recuadro_fila             Cuatro casillas 0x90 en HL (FILVRM)
 D 0x87E1 0x8803 textos_bonus  1ST BONUS 1000 y 2ND BONUS 500 (los numeros son casillas propias, 0x80-0x89)
 F 0x87E1 17
-L 0x8803 apuestas_empieza          La carrera 1; cada jugador que apuesta empieza con su marca a 1
+L 0x8803 apuestas_empieza          La carrera 1; cada jugador que apuesta empieza con 100 puntos (0x0100 en BCD)
 C 0x8803 la carrera 1
 C 0x8808 cuantos jugadores...
 C 0x880B ...0: el jinete
-C 0x880F una marca cada 4 bytes desde 0xE031
+C 0x880F el byte del medio de su dinero (0xE031), cada 4 bytes: 100 puntos
 L 0x8815 apuestas_empieza_uno      Un jugador
 L 0x881B seleccion_cursor          El cursor de la seleccion: la palanca mueve la opcion (0-4) y el sprite parpadea
 C 0x881B cinco opciones
@@ -1782,7 +1782,7 @@ C 0xA332 + la cuota...
 C 0xA333 ...en BCD
 C 0xA334 el byte bajo del dinero
 C 0xA339 el acarreo, al alto
-C 0xA33D el byte alto
+C 0xA33D el byte alto; el acarreo de aqui se pierde (no pasa al tercero, 0xE032): pasados 9999 puntos el dinero vuelve a empezar
 C 0xA340 los contadores
 C 0xA345 IY - 0xE02F...
 C 0xA34C ...entre 2: el jugador x 2...
@@ -2157,6 +2157,7 @@ C 0xAB43 16?
 C 0xAB47 uno mas
 C 0xAB49 su sitio en la cola
 C 0xAB4C la espera (0x20 cuadros)
+C 0xAB4F en la cola (0xF0D7); el sitio 16 es 0xF0E6, el de la barra MIN-MAX
 C 0xAB50 el byte del paso del caballo...
 C 0xAB53 ...con el latigo (bit 5)
 C 0xAB5F cuantos en cola
@@ -2169,7 +2170,7 @@ C 0xAB6C el estado del latigo...
 C 0xAB71 ...a 1: la velocidad sube
 C 0xAB78 la cola...
 C 0xAB7A ...corre un sitio
-C 0xAB7B lo que queda de cola
+C 0xAB7B lo que queda de cola: 16 - B, que solo sirve hasta 8 en cola (con 16, ninguno)
 C 0xAB82 nada
 C 0xAB89 uno menos
 C 0xAB8C el mismo sitio otra vez

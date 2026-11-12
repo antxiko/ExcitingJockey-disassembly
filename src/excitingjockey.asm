@@ -1083,14 +1083,14 @@ DATA_textos_bonus:
 ; ======================================================================
 
 
-apuestas_empieza:		; La carrera 1; cada jugador que apuesta empieza con su marca a 1
+apuestas_empieza:		; La carrera 1; cada jugador que apuesta empieza con 100 puntos (0x0100 en BCD)
 	ld a,001h		;8803   ; la carrera 1
 	ld (0e000h),a		;8805
 	ld a,(0e001h)		;8808   ; cuantos jugadores...
 	and 007h		;880b   ; ...0: el jinete
 	ret z			;880d
 	ld b,a			;880e
-	ld hl,0e031h		;880f   ; una marca cada 4 bytes desde 0xE031
+	ld hl,0e031h		;880f   ; el byte del medio de su dinero (0xE031), cada 4 bytes: 100 puntos
 	ld de,00004h		;8812
 apuestas_empieza_uno:		; Un jugador
 	ld (hl),001h		;8815
@@ -4967,7 +4967,7 @@ pago_espera:		; Espera a que la interrupcion de paso (0xF0E9, cada dos cuadros)
 	ld a,000h		;a337   ; ...con el acarreo
 	adc a,(iy+002h)		;a339   ; el acarreo, al alto
 	daa			;a33c
-	ld (iy+002h),a		;a33d   ; el byte alto
+	ld (iy+002h),a		;a33d   ; el byte alto; el acarreo de aqui se pierde (no pasa al tercero, 0xE032): pasados 9999 puntos el dinero vuelve a empezar
 	push bc			;a340   ; los contadores
 	push ix		;a341   ; que jugador es...
 	push iy		;a343
@@ -6076,7 +6076,7 @@ latigo_nuevo:		; Una vez por pulsacion
 	inc hl			;ab48
 	call suma_a		;ab49   ; su sitio en la cola
 	ld a,(0ab26h)		;ab4c   ; la espera (0x20 cuadros)
-	ld (hl),a			;ab4f
+	ld (hl),a			;ab4f   ; en la cola (0xF0D7); el sitio 16 es 0xF0E6, el de la barra MIN-MAX
 	call caballo_jugador		;ab50   ; el byte del paso del caballo...
 	set 5,(hl)		;ab53   ; ...con el latigo (bit 5)
 	ret			;ab55
@@ -6107,7 +6107,7 @@ latigo_sale:		; Sale: al estado 1 y la cola corre
 	ld e,l			;ab78   ; la cola...
 	ld d,h			;ab79
 	inc hl			;ab7a   ; ...corre un sitio
-	ld a,010h		;ab7b   ; lo que queda de cola
+	ld a,010h		;ab7b   ; lo que queda de cola: 16 - B, que solo sirve hasta 8 en cola (con 16, ninguno)
 	sub b			;ab7d
 	ld c,a			;ab7e
 	ld b,000h		;ab7f

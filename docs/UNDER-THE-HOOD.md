@@ -14,7 +14,7 @@ be placed in the root as `excitingjockey.rom` (the GoodMSX dump, `[!]`, sha1 `5b
 | named data | 7,345 |
 | unexplained | 0 |
 
-The listing has 1,918 comments on 4,521 instructions (42.4%), 505 routines and labels, none
+The listing has 1,919 comments on 4,521 instructions (42.4%), 505 routines and labels, none
 below 10% commented, and no called routine without a name.
 
 ## The cartridge
